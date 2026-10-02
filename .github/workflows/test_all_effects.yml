@@ -1,0 +1,135 @@
+name: Test All Effects Labeled
+on:
+  workflow_dispatch:
+
+jobs:
+  effects:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright -q
+          python3 -m playwright install chromium
+          echo "✅ 完了"
+
+      - name: Record base footage
+        run: |
+          python3 << 'RECEOF'
+          import asyncio, os, subprocess
+          from playwright.async_api import async_playwright
+
+          async def record(url, out_dir, duration=8):
+              os.makedirs(out_dir, exist_ok=True)
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+                  page = await browser.new_page(viewport={"width": 540, "height": 960})
+                  await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                  await page.wait_for_timeout(2000)
+                  fps, frames = 30, duration * 30
+                  for i in range(frames):
+                      await page.evaluate(f"window.scrollTo(0, {int(800*i/frames)})")
+                      await page.screenshot(path=f"{out_dir}/frame_{i:04d}.png")
+                      await page.wait_for_timeout(33)
+                  await browser.close()
+              subprocess.run([
+                  "ffmpeg", "-r", "30", "-i", f"{out_dir}/frame_%04d.png",
+                  "-vf", "scale=1080:1920:flags=lanczos",
+                  "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
+                  f"{out_dir}/video.mp4", "-y"
+              ], capture_output=True)
+              print(f"✅ 録画完了: {url}")
+
+          asyncio.run(record("https://en.wikipedia.org/wiki/Dario_Amodei", "/tmp/clip1"))
+          asyncio.run(record("https://techcrunch.com/category/artificial-intelligence/", "/tmp/clip2"))
+          RECEOF
+          ls -lh /tmp/clip1/video.mp4 /tmp/clip2/video.mp4
+
+      - name: Apply effects with labels
+        run: |
+          mkdir -p /tmp/effects
+          V1=/tmp/clip1/video.mp4
+          V2=/tmp/clip2/video.mp4
+          O=/tmp/effects
+          FONT=/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc
+
+          add_label() {
+            INPUT=$1
+            OUTPUT=$2
+            LABEL=$3
+            ffmpeg -i "$INPUT"               -vf "drawbox=x=0:y=0:w=iw:h=120:color=black@0.7:t=fill,
+                   drawtext=fontfile=$FONT:text='$LABEL':fontsize=42:fontcolor=white:x=(w-text_w)/2:y=35"               -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p               "$OUTPUT" -y 2>/dev/null && echo "✅ $LABEL"
+          }
+
+          # ① fade
+          ffmpeg -i $V1 -vf "fade=t=in:st=0:d=1,fade=t=out:st=7:d=1" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/01_fade.mp4 "01 FADE IN/OUT"
+
+          # ② dissolve
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=dissolve:duration=1:offset=4[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/02_dissolve.mp4 "02 DISSOLVE"
+
+          # ③ wipeleft
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=wipeleft:duration=0.5:offset=4[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/03_wipeleft.mp4 "03 WIPE LEFT"
+
+          # ④ slideleft
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=slideleft:duration=0.5:offset=4[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/04_slideleft.mp4 "04 SLIDE LEFT"
+
+          # ⑤ circleopen
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=circleopen:duration=1:offset=4[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/05_circleopen.mp4 "05 CIRCLE OPEN"
+
+          # ⑥ pixelize
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=pixelize:duration=0.5:offset=4[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/06_pixelize.mp4 "06 PIXELIZE"
+
+          # ⑦ radial
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=radial:duration=1:offset=4[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/07_radial.mp4 "07 RADIAL"
+
+          # ⑧ zoompan
+          ffmpeg -i $V1 -t 8 -vf "zoompan=z='min(zoom+0.002,1.3)':d=240:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)',scale=1080:1920" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/08_zoompan.mp4 "08 ZOOM PAN (Ken Burns)"
+
+          # ⑨ vignette
+          ffmpeg -i $V1 -vf "vignette=PI/4" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/09_vignette.mp4 "09 VIGNETTE"
+
+          # ⑩ eq
+          ffmpeg -i $V1 -vf "eq=brightness=0.1:contrast=1.3:saturation=1.5" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/10_eq.mp4 "10 EQ (明るさ/コントラスト)"
+
+          # ⑪ unsharp
+          ffmpeg -i $V1 -vf "unsharp=5:5:1.5:5:5:0.0" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/11_unsharp.mp4 "11 UNSHARP (シャープ)"
+
+          # ⑫ colorgrade
+          ffmpeg -i $V1 -vf "colorchannelmixer=.8:0:0:0:0:.8:0:0:0:0:1.2:0" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/12_colorgrade.mp4 "12 COLOR GRADE (青み)"
+
+          # ⑬ fast
+          ffmpeg -i $V1 -vf "setpts=0.5*PTS,scale=1080:1920" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/13_fast.mp4 "13 FAST (2倍速)"
+
+          # ⑭ slow
+          ffmpeg -i $V1 -t 5 -vf "setpts=2.0*PTS,scale=1080:1920" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/14_slow.mp4 "14 SLOW (0.5倍速)"
+
+          # ⑮ combined
+          ffmpeg -i $V1 -vf "fade=t=in:st=0:d=1,fade=t=out:st=7:d=1,vignette=PI/4,unsharp=5:5:1.0:5:5:0.0,eq=brightness=0.05:contrast=1.2:saturation=1.3" -c:v libx264 -crf 18 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/15_combined.mp4 "15 COMBINED (全合体)"
+
+          ls -lh $O/
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-effects-labeled
+          path: /tmp/effects/
+          retention-days: 3

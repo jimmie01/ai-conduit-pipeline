@@ -1,0 +1,38 @@
+name: Lightning AI Remotion Render
+on:
+  workflow_dispatch:
+    inputs:
+      video_name:
+        description: 'Video folder name'
+        required: true
+        default: 'documentary-30min'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install lightning-sdk
+        run: pip install lightning-sdk -q
+
+      - name: Render on Lightning AI Sandbox
+        env:
+          LIGHTNING_USER_ID: ${{ secrets.LIGHTNING_USER_ID }}
+          LIGHTNING_API_KEY: ${{ secrets.LIGHTNING_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+        run: python lightning_remotion_render.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: documentary-lightning-${{ github.run_number }}
+          path: documentary_output.mp4
+          retention-days: 7

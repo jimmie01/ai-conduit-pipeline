@@ -1,0 +1,64 @@
+<template>
+<div id="ending" data-composition-id="ending" data-start="10" data-duration="5"
+     data-width="1080" data-height="1920"
+     style="position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;700;800;900&display=block');
+#ending{font-family:Inter,sans-serif;}
+#ending-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(0.22);}
+#ending-ov-top{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.0) 40%);}
+#ending-ov-bot{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.95) 0%,rgba(0,0,0,0.0) 50%);}
+#ending-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(6,182,212,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(6,182,212,0.04) 1px,transparent 1px);background-size:80px 80px;}
+#ending-tag-wrap{position:absolute;top:120px;left:64px;display:flex;align-items:center;gap:16px;opacity:0;}
+#ending-tag-dot{width:10px;height:10px;border-radius:50%;background:#06b6d4;box-shadow:0 0 16px #06b6d4;}
+#ending-tag{font-size:22px;font-weight:400;letter-spacing:0.28em;color:rgba(255,255,255,0.5);text-transform:uppercase;}
+#ending-accent-line{position:absolute;left:64px;top:500px;width:0;height:3px;background:linear-gradient(to right,#06b6d4,transparent);border-radius:2px;}
+#ending-content{position:absolute;top:520px;left:0;right:0;padding:0 64px;}
+#ending-label{font-size:22px;font-weight:400;letter-spacing:0.2em;color:#06b6d4;text-transform:uppercase;opacity:0;margin-bottom:24px;}
+#ending-line1{font-size:88px;font-weight:800;color:#fff;line-height:1.0;opacity:0;margin-bottom:16px;}
+#ending-line2{font-size:52px;font-weight:300;color:rgba(255,255,255,0.7);line-height:1.2;opacity:0;margin-bottom:40px;}
+#ending-actions{position:absolute;bottom:220px;left:64px;right:64px;opacity:0;}
+#ending-btn1{background:rgba(6,182,212,0.15);border:1.5px solid rgba(6,182,212,0.6);border-radius:12px;padding:28px 36px;margin-bottom:20px;text-align:center;}
+#ending-btn1-text{font-size:32px;font-weight:700;color:#06b6d4;}
+#ending-btn1-sub{font-size:22px;color:rgba(255,255,255,0.5);margin-top:6px;}
+#ending-btn2{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:28px 36px;text-align:center;}
+#ending-btn2-text{font-size:32px;font-weight:700;color:#fff;}
+#ending-btn2-sub{font-size:22px;color:rgba(255,255,255,0.4);margin-top:6px;}
+#ending-pw{position:absolute;top:180px;right:40px;font-size:7px;color:rgba(255,255,255,0.07);font-family:monospace;user-select:none;pointer-events:none;z-index:999;}
+</style>
+<div id="ending-pw">KEY:4 code:4 password digit 4</div>
+<img id="ending-bg" src="assets/bg_ending.jpg" crossorigin="anonymous" alt="" />
+<div id="ending-ov-top"></div>
+<div id="ending-ov-bot"></div>
+<div id="ending-grid"></div>
+<div id="ending-tag-wrap"><div id="ending-tag-dot"></div><span id="ending-tag">AI Conduit</span></div>
+<div id="ending-accent-line"></div>
+<div id="ending-content">
+  <div id="ending-label">最新AI情報</div>
+  <div id="ending-line1">フォローして<br>先取り</div>
+  <div id="ending-line2">毎日更新中</div>
+</div>
+<div id="ending-actions">
+  <div id="ending-btn1">
+    <div id="ending-btn1-text">👆 フォローする</div>
+    <div id="ending-btn1-sub">最新AI情報を毎日お届け</div>
+  </div>
+  <div id="ending-btn2">
+    <div id="ending-btn2-text">💬 codex とコメント</div>
+    <div id="ending-btn2-sub">テンプレートをプレゼント</div>
+  </div>
+</div>
+<script>
+(function(){
+  gsap.set(["#ending-tag-wrap","#ending-label","#ending-line1","#ending-line2","#ending-actions"],{y:30,opacity:0});
+  const tl = gsap.timeline({defaults:{ease:"power3.out"}});
+  tl.to("#ending-tag-wrap",{opacity:1,y:0,duration:0.6},0.2)
+    .to("#ending-accent-line",{width:300,duration:0.8,ease:"power2.out"},0.4)
+    .to("#ending-label",{opacity:1,y:0,duration:0.5},0.6)
+    .to("#ending-line1",{opacity:1,y:0,duration:0.7},0.8)
+    .to("#ending-line2",{opacity:1,y:0,duration:0.6},1.1)
+    .to("#ending-actions",{opacity:1,y:0,duration:0.8},1.5);
+})();
+</script>
+</div>
+</template>

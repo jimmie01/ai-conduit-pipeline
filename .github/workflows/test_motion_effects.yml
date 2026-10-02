@@ -1,0 +1,135 @@
+name: Test Motion Effects
+on:
+  workflow_dispatch:
+
+jobs:
+  effects:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright -q
+          python3 -m playwright install chromium
+          echo "✅ 完了"
+
+      - name: Record base footage
+        run: |
+          python3 << 'RECEOF'
+          import asyncio, os, subprocess
+          from playwright.async_api import async_playwright
+
+          async def record(url, out_dir, duration=8):
+              os.makedirs(out_dir, exist_ok=True)
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+                  page = await browser.new_page(viewport={"width": 540, "height": 960})
+                  await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                  await page.wait_for_timeout(2000)
+                  fps, frames = 30, duration * 30
+                  for i in range(frames):
+                      await page.evaluate(f"window.scrollTo(0, {int(800*i/frames)})")
+                      await page.screenshot(path=f"{out_dir}/frame_{i:04d}.png")
+                      await page.wait_for_timeout(33)
+                  await browser.close()
+              subprocess.run([
+                  "ffmpeg", "-r", "30", "-i", f"{out_dir}/frame_%04d.png",
+                  "-vf", "scale=1080:1920:flags=lanczos",
+                  "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
+                  f"{out_dir}/video.mp4", "-y"
+              ], capture_output=True)
+              print(f"✅ 録画完了: {url}")
+
+          asyncio.run(record("https://en.wikipedia.org/wiki/Dario_Amodei", "/tmp/clip1"))
+          asyncio.run(record("https://techcrunch.com/category/artificial-intelligence/", "/tmp/clip2"))
+          asyncio.run(record("https://www.theverge.com/ai-artificial-intelligence", "/tmp/clip3"))
+          RECEOF
+          ls -lh /tmp/clip1/video.mp4 /tmp/clip2/video.mp4 /tmp/clip3/video.mp4
+
+      - name: Apply motion effects with labels
+        run: |
+          mkdir -p /tmp/motion
+          V1=/tmp/clip1/video.mp4
+          V2=/tmp/clip2/video.mp4
+          V3=/tmp/clip3/video.mp4
+          O=/tmp/motion
+          FONT=/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc
+
+          add_label() {
+            INPUT=$1 OUTPUT=$2 LABEL=$3
+            ffmpeg -i "$INPUT"               -vf "drawbox=x=0:y=0:w=iw:h=130:color=black@0.8:t=fill,drawtext=fontfile=$FONT:text='$LABEL':fontsize=38:fontcolor=white:x=(w-text_w)/2:y=40"               -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p "$OUTPUT" -y 2>/dev/null && echo "✅ $LABEL" || echo "❌ $LABEL"
+          }
+
+          # 31 WHIP PAN
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=hlslice:duration=0.3:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/31_whip_pan.mp4 "31 WHIP PAN"
+
+          # 32 SHAKE
+          ffmpeg -i $V1 -vf "crop=iw-20:ih-20:10+10*sin(t*20):10+10*sin(t*17),scale=1080:1920" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/32_shake.mp4 "32 SHAKE"
+
+          # 33 BOUNCE ZOOM（シンプルなzoom版）
+          ffmpeg -i $V1 -t 8 -vf "zoompan=z='1.2':d=240:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)',scale=1080:1920" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/33_bounce_zoom.mp4 "33 BOUNCE ZOOM"
+
+          # 34 PUSH UP
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=slideup:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/34_push_up.mp4 "34 PUSH UP"
+
+          # 35 PUSH DOWN
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=slidedown:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/35_push_down.mp4 "35 PUSH DOWN"
+
+          # 36 SLIDE RIGHT
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=slideright:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/36_slide_right.mp4 "36 SLIDE RIGHT"
+
+          # 37 WIPE RIGHT
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=wiperight:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/37_wipe_right.mp4 "37 WIPE RIGHT"
+
+          # 38 WIPE UP
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=wipeup:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/38_wipe_up.mp4 "38 WIPE UP"
+
+          # 39 WIPE DOWN
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=wipedown:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/39_wipe_down.mp4 "39 WIPE DOWN"
+
+          # 40 CLOCK WIPE
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=radial:duration=1:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/40_clock_wipe.mp4 "40 CLOCK WIPE"
+
+          # 41 FLIP HORIZONTAL
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=horzopen:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/41_flip_horizontal.mp4 "41 FLIP HORIZONTAL"
+
+          # 42 FLIP VERTICAL
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=vertopen:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/42_flip_vertical.mp4 "42 FLIP VERTICAL"
+
+          # 43 LENS DISTORTION
+          ffmpeg -i $V1 -vf "lenscorrection=cx=0.5:cy=0.5:k1=-0.3:k2=0.1" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/43_lens_distortion.mp4 "43 LENS DISTORTION"
+
+          # 44 ZOOM IN TRANSITION
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=zoomin:duration=0.8:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/44_zoom_in.mp4 "44 ZOOM IN"
+
+          # 45 DIAGONAL WIPE
+          ffmpeg -i $V1 -i $V2 -filter_complex "[0:v][1:v]xfade=transition=diagtl:duration=0.5:offset=5[v]" -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/45_diagonal_wipe.mp4 "45 DIAGONAL WIPE"
+
+          ls -lh $O/
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: motion-effects-labeled
+          path: /tmp/motion/
+          retention-days: 3

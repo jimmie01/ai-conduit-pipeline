@@ -1,0 +1,135 @@
+name: Test New Effects Labeled
+on:
+  workflow_dispatch:
+
+jobs:
+  effects:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright -q
+          python3 -m playwright install chromium
+          echo "✅ 完了"
+
+      - name: Record base footage
+        run: |
+          python3 << 'RECEOF'
+          import asyncio, os, subprocess
+          from playwright.async_api import async_playwright
+
+          async def record(url, out_dir, duration=8):
+              os.makedirs(out_dir, exist_ok=True)
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+                  page = await browser.new_page(viewport={"width": 540, "height": 960})
+                  await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                  await page.wait_for_timeout(2000)
+                  fps, frames = 30, duration * 30
+                  for i in range(frames):
+                      await page.evaluate(f"window.scrollTo(0, {int(800*i/frames)})")
+                      await page.screenshot(path=f"{out_dir}/frame_{i:04d}.png")
+                      await page.wait_for_timeout(33)
+                  await browser.close()
+              subprocess.run([
+                  "ffmpeg", "-r", "30", "-i", f"{out_dir}/frame_%04d.png",
+                  "-vf", "scale=1080:1920:flags=lanczos",
+                  "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
+                  f"{out_dir}/video.mp4", "-y"
+              ], capture_output=True)
+              print(f"✅ 録画完了: {url}")
+
+          asyncio.run(record("https://en.wikipedia.org/wiki/Dario_Amodei", "/tmp/clip1"))
+          asyncio.run(record("https://techcrunch.com/category/artificial-intelligence/", "/tmp/clip2"))
+          asyncio.run(record("https://www.theverge.com/ai-artificial-intelligence", "/tmp/clip3"))
+          RECEOF
+          ls -lh /tmp/clip1/video.mp4 /tmp/clip2/video.mp4 /tmp/clip3/video.mp4
+
+      - name: Apply new effects with labels
+        run: |
+          mkdir -p /tmp/effects2
+          V1=/tmp/clip1/video.mp4
+          V2=/tmp/clip2/video.mp4
+          V3=/tmp/clip3/video.mp4
+          O=/tmp/effects2
+          FONT=/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc
+
+          add_label() {
+            INPUT=$1 OUTPUT=$2 LABEL=$3
+            ffmpeg -i "$INPUT"               -vf "drawbox=x=0:y=0:w=iw:h=130:color=black@0.8:t=fill,
+                   drawtext=fontfile=$FONT:text='$LABEL':fontsize=38:fontcolor=white:x=(w-text_w)/2:y=40"               -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p               "$OUTPUT" -y 2>/dev/null && echo "✅ $LABEL"
+          }
+
+          # ① DIP TO BLACK（黒に消えて次へ）
+          ffmpeg -i $V1 -i $V2             -filter_complex "[0:v]fade=t=out:st=6:d=1[v0];[1:v]fade=t=in:st=0:d=1[v1];[v0][v1]concat=n=2:v=1[v]"             -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/16_dip_to_black.mp4 "16 DIP TO BLACK"
+
+          # ② DIP TO WHITE（白に消えて次へ）
+          ffmpeg -i $V1 -i $V2             -filter_complex "[0:v]fade=t=out:st=6:d=1:color=white[v0];[1:v]fade=t=in:st=0:d=1:color=white[v1];[v0][v1]concat=n=2:v=1[v]"             -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/17_dip_to_white.mp4 "17 DIP TO WHITE"
+
+          # ③ FILM GRAIN（フィルム粒子感）
+          ffmpeg -i $V1             -vf "noise=alls=15:allf=t+u"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/18_film_grain.mp4 "18 FILM GRAIN"
+
+          # ④ TEAL AND ORANGE（ハリウッド映画の定番色）
+          ffmpeg -i $V1             -vf "colorchannelmixer=1.1:0:0:0:0:0.9:0.1:0:0:0.1:1.2:0"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/19_teal_orange.mp4 "19 TEAL AND ORANGE"
+
+          # ⑤ BLEACH BYPASS（コントラスト強め・脱色）
+          ffmpeg -i $V1             -vf "eq=contrast=1.5:saturation=0.6:brightness=0.05"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/20_bleach_bypass.mp4 "20 BLEACH BYPASS"
+
+          # ⑥ VINTAGE/RETRO（レトロ・懐かし感）
+          ffmpeg -i $V1             -vf "curves=r='0/0.1 0.5/0.6 1/0.9':g='0/0 0.5/0.5 1/0.85':b='0/0 0.5/0.4 1/0.75',noise=alls=8:allf=t"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/21_vintage_retro.mp4 "21 VINTAGE/RETRO"
+
+          # ⑦ GLITCH EFFECT（デジタル歪み・テック感）
+          ffmpeg -i $V1             -vf "rgbashift=rh=3:bh=-3,noise=alls=10:allf=t"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/22_glitch.mp4 "22 GLITCH EFFECT"
+
+          # ⑧ CINEMATIC COLOR（映画風・暖色）
+          ffmpeg -i $V1             -vf "curves=r='0/0 0.5/0.55 1/1':g='0/0 0.5/0.5 1/0.95':b='0/0.05 0.5/0.45 1/0.9',vignette=PI/5"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/23_cinematic.mp4 "23 CINEMATIC COLOR"
+
+          # ⑨ SPEED RAMP（速度変化・ドラマチック）
+          ffmpeg -i $V1 -t 8             -vf "setpts='if(lt(T,2),2.0*PTS,if(lt(T,5),0.5*PTS,2.0*PTS))',scale=1080:1920"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/24_speed_ramp.mp4 "24 SPEED RAMP"
+
+          # ⑩ FREEZE FRAME（静止・強調）
+          ffmpeg -i $V1             -vf "tpad=stop_mode=clone:stop_duration=2"             -t 10 -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/25_freeze_frame.mp4 "25 FREEZE FRAME"
+
+          # ⑪ HIGHLIGHT BOX（重要部分を枠で強調）
+          ffmpeg -i $V1             -vf "drawbox=x=50:y=300:w=980:h=400:color=yellow@0.5:t=5"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/26_highlight_box.mp4 "26 HIGHLIGHT BOX"
+
+          # ⑫ NEON COLOR（ネオンカラー・サイバー風）
+          ffmpeg -i $V1             -vf "eq=saturation=2.0:contrast=1.2,colorchannelmixer=0.8:0:0.2:0:0:0.8:0.2:0:0.2:0:1.2:0"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/27_neon.mp4 "27 NEON COLOR"
+
+          # ⑬ VHS EFFECT（VHS・アナログノイズ）
+          ffmpeg -i $V1             -vf "noise=alls=20:allf=t,rgbashift=rh=5:bh=-5,eq=contrast=0.9:saturation=0.8"             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/28_vhs.mp4 "28 VHS EFFECT"
+
+          # ⑭ FILM GRAIN + VIGNETTE + CINEMATIC（プロ合体）
+          ffmpeg -i $V1             -vf "curves=r='0/0 0.5/0.55 1/1':g='0/0 0.5/0.5 1/0.95':b='0/0.05 0.5/0.45 1/0.9',vignette=PI/4,noise=alls=10:allf=t,eq=contrast=1.1:saturation=1.1,fade=t=in:st=0:d=1,fade=t=out:st=7:d=1"             -c:v libx264 -crf 18 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/29_pro_combined.mp4 "29 PRO COMBINED"
+
+          # ⑮ 3シーン結合（wipeleft+slideleft+circleopen）
+          ffmpeg -i $V1 -i $V2 -i $V3             -filter_complex "[0:v][1:v]xfade=transition=wipeleft:duration=0.5:offset=6[v01];[v01][2:v]xfade=transition=slideleft:duration=0.5:offset=12[v]"             -map "[v]" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/t.mp4 -y 2>/dev/null
+          add_label /tmp/t.mp4 $O/30_3scene_mix.mp4 "30 3SCENE MIX"
+
+          ls -lh $O/
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: new-effects-labeled
+          path: /tmp/effects2/
+          retention-days: 3

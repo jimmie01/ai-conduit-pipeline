@@ -1,0 +1,54 @@
+{
+  "selected_title": "AIコーディング4連携で開発爆速！",
+  "category": "ai_ecosystem",
+  "source_repo": "jnMetaCode/ai-coding-guide",
+  "hashtags": [
+    "#AI",
+    "#ClaudeCode",
+    "#エンジニア",
+    "#プログラミング",
+    "#AIツール"
+  ],
+  "script": {
+    "title": "AIコーディング4連携で開発爆速！",
+    "total_duration_sec": 18,
+    "scenes": [
+      {
+        "scene_title": "Hook",
+        "mood": "hook",
+        "duration_sec": 3,
+        "narration": "AI開発、1つだけじゃ足りない！",
+        "visual_desc": "terminal screen coding"
+      },
+      {
+        "scene_title": "Tip",
+        "mood": "value",
+        "duration_sec": 4,
+        "narration": "superpowersで要件分析を注入",
+        "visual_desc": "code editor screen"
+      },
+      {
+        "scene_title": "Demo",
+        "mood": "impact",
+        "duration_sec": 4,
+        "narration": "エージェント起動で実装が爆速化",
+        "visual_desc": "developer working fast"
+      },
+      {
+        "scene_title": "Twist",
+        "mood": "twist",
+        "duration_sec": 4,
+        "narration": "オーケストレーターが全業務自動化",
+        "visual_desc": "ai assistant coding"
+      },
+      {
+        "scene_title": "CTA",
+        "mood": "cta",
+        "duration_sec": 3,
+        "narration": "コメントにAIと書いてプレゼントゲット！",
+        "visual_desc": "smartphone comment notification"
+      }
+    ]
+  },
+  "gift_content": "AI開発の4プロジェクト連携ガイド（日本語版）。インストールから組み合わせまで完全図解。"
+}

@@ -1,0 +1,41 @@
+name: Screen Record Multi-Scene
+on:
+  workflow_dispatch:
+    inputs:
+      sample_name:
+        description: "サンプル名"
+        required: true
+        default: "recordly-launch"
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright -q
+          python3 -m playwright install chromium
+          echo "✅ 依存関係インストール完了"
+
+      - name: Record multi-scene
+        env:
+          SAMPLE_NAME: ${{ github.event.inputs.sample_name }}
+        run: |
+          python3 scripts/screen_record_multi_scene.py
+
+      - name: Check result
+        run: |
+          ls -lh /tmp/final_screen_recording.mp4
+          ffprobe -v quiet -show_entries stream=width,height,duration -of csv=p=0 /tmp/final_screen_recording.mp4
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: screen-recording-${{ github.event.inputs.sample_name }}
+          path: /tmp/final_screen_recording.mp4
+          retention-days: 3

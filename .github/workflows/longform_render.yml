@@ -1,0 +1,85 @@
+name: Longform Video Render
+on:
+  workflow_dispatch:
+    inputs:
+      video_name:
+        description: 'Video folder name under longform/'
+        required: true
+        default: 'anthropic-vs-openai'
+      upload:
+        description: 'Upload to YouTube'
+        required: false
+        default: 'false'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install edge-tts --quiet
+          npm install -g hyperframes
+          npm install -g playwright
+          npx playwright install chromium --with-deps
+
+      - name: Take screenshots
+        run: python3 scripts/longform/take_screenshots.py ${{ github.event.inputs.video_name }}
+
+      - name: Generate TTS and SRT
+        run: python3 scripts/longform/gen_tts.py ${{ github.event.inputs.video_name }}
+
+      - name: Build HyperFrames compositions
+        run: python3 scripts/longform/build_compositions.py ${{ github.event.inputs.video_name }}
+
+      - name: Render with HyperFrames
+        run: |
+          HF_VIDEO_COVERAGE_THRESHOLD=0 \
+          PRODUCER_STREAMING_ENCODE_MAX_DURATION_SECONDS=2400 \
+          hyperframes render longform/${{ github.event.inputs.video_name }} -o raw_video.mp4 --low-memory-mode
+          ls -lh raw_video.mp4
+
+      - name: Merge video audio BGM subtitles
+        run: |
+          ffmpeg -y -i narration_full.srt narration_full.ass 2>/dev/null || true
+          VIDEO_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 raw_video.mp4 | awk '{printf "%.0f", $1}')
+          NARR_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 narration_full.mp3 | awk '{printf "%.0f", $1}')
+          MAX_DUR=$((VIDEO_DUR > NARR_DUR ? VIDEO_DUR : NARR_DUR))
+          FADE_START=$((MAX_DUR - 5))
+          echo "映像: ${VIDEO_DUR}s, ナレーション: ${NARR_DUR}s"
+          if [ -f "narration_full.ass" ]; then
+            ffmpeg -y -i raw_video.mp4 -i narration_full.mp3 \
+              -vf "ass=narration_full.ass" \
+              -map 0:v -map 1:a \
+              -c:v libx264 -c:a aac -pix_fmt yuv420p \
+              merged_with_subs.mp4 2>/dev/null
+          else
+            ffmpeg -y -i raw_video.mp4 -i narration_full.mp3 \
+              -map 0:v -map 1:a -c:v libx264 -c:a aac -pix_fmt yuv420p \
+              merged_with_subs.mp4 2>/dev/null
+          fi
+          if [ -f "assets/bgm_lofi.mp3" ]; then
+            ffmpeg -y \
+              -i merged_with_subs.mp4 \
+              -i assets/bgm_lofi.mp3 \
+              -filter_complex "[1:a]aloop=loop=-1:size=2000000,atrim=0:${MAX_DUR},afade=t=in:st=0:d=3,afade=t=out:st=${FADE_START}:d=5,volume=0.12[bgm];[0:a][bgm]amix=inputs=2:duration=first[aout]" \
+              -map 0:v -map "[aout]" \
+              -c:v copy -c:a aac -b:a 192k output.mp4
+          else
+            cp merged_with_subs.mp4 output.mp4
+          fi
+          ls -lh output.mp4
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: longform-${{ github.event.inputs.video_name }}-${{ github.run_number }}
+          path: output.mp4
+          retention-days: 7

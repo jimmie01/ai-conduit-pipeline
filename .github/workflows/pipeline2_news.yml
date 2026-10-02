@@ -1,0 +1,171 @@
+name: AI Conduit パイプライン2 ニュース動画
+
+on:
+  schedule:
+    # # - cron: '0 11 * * *'  # 毎日20:00 JST (UTC 11:00) ※視聴者が最も多い時間帯
+  workflow_dispatch:
+
+jobs:
+  generate_news_video:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y ffmpeg fonts-noto-cjk fonts-noto-cjk-extra
+          pip install requests edge-tts pillow google-cloud-texttospeech google-auth google-api-python-client google-auth-httplib2 google-auth-oauthlib google-cloud-texttospeech google-auth moviepy numpy moviepy numpy pynacl asciinema playwright
+          curl -sL https://github.com/asciinema/agg/releases/download/v1.9.0/agg-x86_64-unknown-linux-gnu -o /usr/local/bin/agg && chmod +x /usr/local/bin/agg
+          python3 -m playwright install chromium
+          python3 -m playwright install-deps chromium
+          # 無効化
+
+      - name: SFX確認
+        run: ls assets/sfx/ || echo "SFXディレクトリなし"
+
+      - name: キャッシュクリア
+        run: rm -rf assets/pexels_cache/playwright_kenburns_*.mp4 sns_automation/news_content_plan*.json || true
+
+      - name: used_topics確認
+        run: |
+          echo "=== 使用済みトピック一覧 ==="
+          cat sns_automation/used_topics.json 2>/dev/null || echo "used_topics.json not found"
+
+      - name: Step 1 - ニュース収集
+        run: python3 sns_automation/scripts/research_collector.py
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+
+      - name: Step 2 - スクリプト生成（Fireship型）
+        run: python3 sns_automation/scripts/ai_tool_content_planner.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Step 2.5 - サムネイル生成（Pollinations.ai）
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          pip install Pillow --break-system-packages -q
+          python3 << 'PYEOF'
+          import json, os, sys
+          from pathlib import Path
+          
+          # news_content_plan.jsonからタイトルを取得
+          plan_path = "sns_automation/news_content_plan.json"
+          title = "AIコーディング最前線"
+          hook = "99%が知らない"
+          
+          try:
+              with open(plan_path) as f:
+                  plan = json.load(f)
+              title = plan.get("selected_title") or plan.get("script", {}).get("title", title)
+              scenes = plan.get("script", {}).get("scenes", [])
+              if scenes:
+                  hook = scenes[0].get("narration", hook)[:15]
+          except Exception as e:
+              print(f"plan読み込みエラー: {e}")
+          
+          print(f"タイトル: {title}")
+          print(f"フック: {hook}")
+          
+          sys.path.insert(0, "sns_automation/scripts")
+          from thumbnail_generator import generate_thumbnail
+          generate_thumbnail(title, hook, "assets/intro_thumbnail.jpg", "tech")
+          print("サムネイル生成完了")
+          PYEOF
+
+      - name: Step 2.6 - プレゼント自動生成（台本内容と一致）
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python3 sns_automation/scripts/gift_generator.py || echo "プレゼント生成スキップ"
+
+      - name: Step 2.7 - ターミナルデモ動画生成
+        run: python3 sns_automation/scripts/run_terminal_demo.py
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Step 2.8 - WEB UI Before/After動画生成
+        run: python3 sns_automation/scripts/run_before_after.py
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Step 3 - 動画生成
+        run: python3 run_from_news_plan.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GOOGLE_TTS_KEY: ${{ secrets.GOOGLE_TTS_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
+      - name: Step 4 - 動画確認用保存（YouTube投稿は手動承認後）
+        run: |
+          echo "✅ 動画生成完了 - 確認用にartifactに保存します"
+          ls -la output/*.mp4 2>/dev/null || ls -la projects/daily/renders/*.mp4 2>/dev/null || echo "動画ファイル確認中"
+      - name: Step 4.2 - 動画連動プレゼント自動生成
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PIPELINE: p2
+        run: |
+          python3 sns_automation/scripts/gift_generator.py sns_automation/news_content_plan.json || echo "⚠️ プレゼント生成スキップ"
+        continue-on-error: true
+
+      - name: Step 4.3 - YouTubeチャンネル最適化（週1回）
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          DAY=$(date +%u)
+          if [ "$DAY" = "1" ]; then
+            python3 sns_automation/scripts/youtube_channel_optimize.py || echo "チャンネル最適化スキップ"
+          fi
+        continue-on-error: true
+
+      - name: Step 4.5 - used_topics.json更新をコミット
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add sns_automation/used_topics.json || true
+          git diff --staged --quiet || git commit -m "Auto: used_topics.json更新 [skip ci]"
+          git push origin master || true
+        continue-on-error: true
+
+      - name: Step 5 - Instagram投稿
+        run: |
+          pip install instagrapi --quiet
+          PIPELINE=p2 python3 sns_automation/scripts/instagram_auto_upload.py
+        env:
+          INSTAGRAM_SESSIONID: ${{ secrets.INSTAGRAM_SESSIONID }}
+        continue-on-error: true
+
+      - name: Step 6 - X投稿（GraphQL方式）
+        run: PIPELINE=p2 python3 sns_automation/scripts/x_graphql_post.py
+        env:
+          X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
+          X_CT0: ${{ secrets.X_CT0 }}
+          X_TWID: ${{ secrets.X_TWID }}
+        continue-on-error: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: news-video-${{ github.run_number }}
+          path: projects/daily/renders/v2news_*.mp4
+          retention-days: 3

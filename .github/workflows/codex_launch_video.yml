@@ -1,0 +1,161 @@
+name: Codex Launch Video Part1
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright edge-tts -q
+          python3 -m playwright install chromium
+          echo "✅ 完了"
+
+      - name: Record all scenes
+        run: |
+          python3 << 'RECEOF'
+          import asyncio, os, subprocess, json
+          from playwright.async_api import async_playwright
+
+          with open("scripts/screen_record_scenes.json") as f:
+              scenes_data = json.load(f)["codex-launch"]["scenes"]
+
+          async def record_scene(url, out_dir, duration, scroll_from, scroll_to):
+              os.makedirs(out_dir, exist_ok=True)
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+                  page = await browser.new_page(viewport={"width": 540, "height": 960})
+                  for attempt in range(3):
+                      try:
+                          await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                          break
+                      except:
+                          await asyncio.sleep(2)
+                  await page.wait_for_timeout(2000)
+                  fps, frames = 30, duration * 30
+                  for i in range(frames):
+                      scroll = int(scroll_from + (scroll_to - scroll_from) * i / frames) if scroll_to > scroll_from else scroll_from
+                      await page.evaluate(f"window.scrollTo(0, {scroll})")
+                      await page.screenshot(path=f"{out_dir}/frame_{i:04d}.png")
+                      await page.wait_for_timeout(33)
+                  await browser.close()
+              subprocess.run(["ffmpeg", "-r", "30", "-i", f"{out_dir}/frame_%04d.png",
+                  "-vf", "scale=1080:1920:flags=lanczos",
+                  "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
+                  f"{out_dir}/video.mp4", "-y"], capture_output=True)
+              print(f"✅ {out_dir} 録画完了")
+
+          async def main():
+              for i, scene in enumerate(scenes_data):
+                  await record_scene(scene["url"], f"/tmp/scenes/scene_{i:02d}",
+                      scene["duration_sec"], scene["scroll_from"], scene["scroll_to"])
+
+          asyncio.run(main())
+          RECEOF
+
+      - name: Generate TTS
+        run: |
+          python3 << 'TTSEOF'
+          import asyncio, edge_tts, os
+          narrations = [
+              "OpenAIが放った最強のコーディングAI、GPT-5-Codexを知っていますか？",
+              "2026年9月15日、OpenAIが突如リリース。世界中の開発者が震えた。",
+              "Codex CLIはターミナルで動くAIエージェントです。コードを書いて、テストして、デプロイまで全自動。",
+              "GitHubではすでに数万スターを獲得。Claude CodeやGemini CLIを超えたという声も。",
+              "しかも完全オープンソース。誰でも今すぐ無料で使えます。",
+              "コメントに codex と書いてくれた人に、完全攻略テンプレートをプレゼント！",
+              "概要欄のリンクからGitHubをチェック。フォローもお忘れなく！",
+          ]
+          async def gen():
+              os.makedirs("/tmp/tts", exist_ok=True)
+              for i, text in enumerate(narrations):
+                  c = edge_tts.Communicate(text, "ja-JP-KeitaNeural", rate="+15%")
+                  await c.save(f"/tmp/tts/chunk_{i:02d}.mp3")
+                  print(f"✅ TTS {i}")
+          asyncio.run(gen())
+          import subprocess
+          with open("/tmp/tts/concat.txt","w") as f:
+              for i in range(len(narrations)):
+                  f.write(f"file '/tmp/tts/chunk_{i:02d}.mp3'\n")
+          subprocess.run(["ffmpeg","-f","concat","-safe","0","-i","/tmp/tts/concat.txt","/tmp/tts/narration.mp3","-y"],capture_output=True)
+          print("✅ TTS結合完了")
+          TTSEOF
+
+      - name: Apply effects
+        run: |
+          mkdir -p /tmp/final
+          FONT=/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc
+
+          ffmpeg -i /tmp/scenes/scene_00/video.mp4 -vf "fade=t=in:st=0:d=1,vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/s01.mp4 -y 2>/dev/null && echo "✅ S01"
+          ffmpeg -i /tmp/scenes/scene_01/video.mp4 -vf "vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/s02.mp4 -y 2>/dev/null && echo "✅ S02"
+          ffmpeg -i /tmp/scenes/scene_02/video.mp4 -vf "vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/s03.mp4 -y 2>/dev/null && echo "✅ S03"
+          ffmpeg -i /tmp/scenes/scene_03/video.mp4 -vf "drawbox=x=20:y=150:w=1040:h=600:color=yellow@0.4:t=5" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/s04.mp4 -y 2>/dev/null && echo "✅ S04"
+          ffmpeg -i /tmp/scenes/scene_04/video.mp4 -vf "vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/s05.mp4 -y 2>/dev/null && echo "✅ S05"
+          ffmpeg -i /tmp/scenes/scene_05/video.mp4 -vf "vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/s06.mp4 -y 2>/dev/null && echo "✅ S06"
+          ffmpeg -i /tmp/scenes/scene_06/video.mp4 -vf "rgbashift=rh=3:bh=-3,noise=alls=8:allf=t,fade=t=out:st=2:d=1" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/s07.mp4 -y 2>/dev/null && echo "✅ S07"
+
+          printf "file '/tmp/final/s01.mp4'\nfile '/tmp/final/s02.mp4'\nfile '/tmp/final/s03.mp4'\nfile '/tmp/final/s04.mp4'\nfile '/tmp/final/s05.mp4'\nfile '/tmp/final/s06.mp4'\nfile '/tmp/final/s07.mp4'\n" > /tmp/concat_list.txt
+          ffmpeg -f concat -safe 0 -i /tmp/concat_list.txt -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/video_no_audio.mp4 -y 2>/dev/null && echo "✅ concat完了"
+          ls -lh /tmp/final/video_no_audio.mp4
+
+      - name: Add BGM + subtitles + upload
+        run: |
+          FONT=/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc
+
+          # フォント確認
+          ls $FONT && echo "✅ フォント確認OK" || echo "❌ フォントなし"
+          fc-list | grep -i noto | head -3
+
+          # BGM Before_the_Gates（ループ）
+          ffmpeg -stream_loop -1 -i assets/bgm/before_the_gates.mp3 \
+            -t 60 -af "volume=0.12,afade=t=in:st=0:d=2,afade=t=out:st=55:d=3" \
+            -ar 44100 /tmp/bgm.mp3 -y 2>/dev/null && echo "✅ BGM準備完了"
+
+          # ナレーション音質向上
+          ffmpeg -i /tmp/tts/narration.mp3 \
+            -af "volume=2.0" \
+            -ar 44100 /tmp/tts/narration_loud.mp3 -y 2>/dev/null && echo "✅ ナレーション音量UP"
+
+          # 動画の長さ確認
+          DURATION=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/video_no_audio.mp4)
+          echo "動画長: ${DURATION}秒"
+
+          # ナレーション + BGM ミックス（44100Hz・ステレオ）
+          ffmpeg -i /tmp/final/video_no_audio.mp4 \
+            -i /tmp/tts/narration_loud.mp3 \
+            -i /tmp/bgm.mp3 \
+            -filter_complex "[1:a]aresample=44100[narr];[2:a]aresample=44100[bgm];[narr][bgm]amix=inputs=2:duration=shortest:weights=3 1[a]" \
+            -map 0:v -map "[a]" \
+            -c:v copy -c:a aac -b:a 192k -ar 44100 -ac 2 \
+            -shortest \
+            /tmp/final/video_with_audio.mp4 -y 2>/dev/null && echo "✅ 音声ミックス完了" || echo "❌ 音声ミックス失敗"
+
+          # 音声確認
+          ffprobe -v quiet -show_entries stream=sample_rate,channels,bit_rate -of csv=p=0 /tmp/final/video_with_audio.mp4 2>/dev/null
+
+          # 字幕追加（大きめフォント・画面下部に固定）
+          ffmpeg -i /tmp/final/video_with_audio.mp4 \
+            -vf "drawtext=fontfile=$FONT:text='GPT-5-Codex爆誕！':fontsize=60:fontcolor=white:x=(w-text_w)/2:y=h-250:enable='between(t,0,3)':borderw=3:bordercolor=black,
+                 drawtext=fontfile=$FONT:text='世界中の開発者が震えた':fontsize=55:fontcolor=white:x=(w-text_w)/2:y=h-250:enable='between(t,3,8)':borderw=3:bordercolor=black,
+                 drawtext=fontfile=$FONT:text='ターミナルAIエージェント登場':fontsize=50:fontcolor=yellow:x=(w-text_w)/2:y=h-250:enable='between(t,8,15)':borderw=3:bordercolor=black,
+                 drawtext=fontfile=$FONT:text='完全オープンソース 無料':fontsize=55:fontcolor=lime:x=(w-text_w)/2:y=h-250:enable='between(t,15,22)':borderw=3:bordercolor=black,
+                 drawtext=fontfile=$FONT:text='コメント codex でプレゼント！':fontsize=50:fontcolor=orange:x=(w-text_w)/2:y=h-250:enable='between(t,22,28)':borderw=3:bordercolor=black" \
+            -c:v libx264 -crf 18 -preset fast -pix_fmt yuv420p \
+            -c:a copy \
+            /tmp/final/codex_launch_final.mp4 -y 2>/dev/null && echo "✅ 字幕追加完了" || echo "❌ 字幕追加失敗"
+
+          ls -lh /tmp/final/codex_launch_final.mp4
+          ffprobe -v quiet -show_entries format=duration,bit_rate -of csv=p=0 /tmp/final/codex_launch_final.mp4
+
+      - name: Upload final video
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-launch-final
+          path: /tmp/final/codex_launch_final.mp4
+          retention-days: 3

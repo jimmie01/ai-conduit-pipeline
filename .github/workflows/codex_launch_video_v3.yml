@@ -1,0 +1,230 @@
+name: Codex Launch Video v3
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright edge-tts -q
+          python3 -m playwright install chromium
+          echo "✅ 完了"
+
+      - name: Record all scenes
+        run: |
+          python3 << 'RECEOF'
+          import asyncio, os, subprocess, json
+          from playwright.async_api import async_playwright
+
+          with open("scripts/screen_record_scenes.json") as f:
+              scenes_data = json.load(f)["codex-launch"]["scenes"]
+
+          async def record_scene(url, out_dir, duration, scroll_from, scroll_to):
+              os.makedirs(out_dir, exist_ok=True)
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+                  page = await browser.new_page(
+                      viewport={"width": 540, "height": 960},
+                      user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
+                  )
+                  for attempt in range(3):
+                      try:
+                          await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                          break
+                      except:
+                          await asyncio.sleep(3)
+                  await page.wait_for_timeout(2000)
+                  fps, frames = 30, duration * 30
+                  for i in range(frames):
+                      if scroll_to > scroll_from:
+                          scroll = int(scroll_from + (scroll_to - scroll_from) * i / frames)
+                      else:
+                          scroll = scroll_from
+                      await page.evaluate(f"window.scrollTo(0, {scroll})")
+                      await page.screenshot(path=f"{out_dir}/frame_{i:04d}.png")
+                      await page.wait_for_timeout(33)
+                  await browser.close()
+              result = subprocess.run([
+                  "ffmpeg", "-r", "30", "-i", f"{out_dir}/frame_%04d.png",
+                  "-vf", "scale=1080:1920:flags=lanczos",
+                  "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
+                  f"{out_dir}/video.mp4", "-y"
+              ], capture_output=True)
+              size = os.path.getsize(f"{out_dir}/video.mp4") // 1024
+              print(f"✅ {out_dir} 録画完了 ({size}KB)")
+
+          async def main():
+              for i, scene in enumerate(scenes_data):
+                  await record_scene(
+                      scene["url"], f"/tmp/scenes/scene_{i:02d}",
+                      scene["duration_sec"], scene["scroll_from"], scene["scroll_to"]
+                  )
+
+          asyncio.run(main())
+          RECEOF
+          ls -lh /tmp/scenes/*/video.mp4
+
+      - name: Generate TTS + SRT
+        run: |
+          python3 << 'TTSEOF'
+          import asyncio, edge_tts, os, subprocess
+
+          # ナレーション（シーン時間に合わせて設計）
+          # 合計28秒: 3+5+4+5+4+4+3
+          chunks = [
+              "OpenAIが放った最強のコーディングAI、GPT-5-Codexを知っていますか？",
+              "2026年9月15日、OpenAIが突如リリース。世界中の開発者が震えた。",
+              "Codex CLIはターミナルで動くAIエージェントです。",
+              "コードを書いて、テストして、デプロイまで全自動でこなします。",
+              "GitHubでは数万スターを獲得。完全オープンソースで誰でも無料で使えます。",
+              "コメントに codex と書いてくれた人に完全攻略テンプレートをプレゼント！",
+              "概要欄のリンクからGitHubをチェック。フォローもお忘れなく！",
+          ]
+
+          async def gen_tts():
+              os.makedirs("/tmp/tts", exist_ok=True)
+              for i, text in enumerate(chunks):
+                  c = edge_tts.Communicate(text, "ja-JP-KeitaNeural", rate="+15%")
+                  await c.save(f"/tmp/tts/chunk_{i:02d}.mp3")
+                  print(f"✅ TTS chunk_{i:02d}: {text[:25]}")
+
+          asyncio.run(gen_tts())
+
+          # 各チャンクの長さを取得してSRT生成
+          import json
+          durations = []
+          for i in range(len(chunks)):
+              result = subprocess.run([
+                  "ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+                  "-of", "csv=p=0", f"/tmp/tts/chunk_{i:02d}.mp3"
+              ], capture_output=True, text=True)
+              dur = float(result.stdout.strip())
+              durations.append(dur)
+              print(f"  chunk_{i:02d}: {dur:.2f}秒")
+
+          # SRTファイル生成
+          def sec_to_srt(s):
+              h = int(s // 3600)
+              m = int((s % 3600) // 60)
+              sec = s % 60
+              ms = int((sec % 1) * 1000)
+              return f"{h:02d}:{m:02d}:{int(sec):02d},{ms:03d}"
+
+          srt_content = ""
+          current_time = 0.0
+          for i, (text, dur) in enumerate(zip(chunks, durations)):
+              start = sec_to_srt(current_time)
+              end = sec_to_srt(current_time + dur)
+              srt_content += f"{i+1}\n{start} --> {end}\n{text}\n\n"
+              current_time += dur
+
+          with open("/tmp/narration.srt", "w", encoding="utf-8") as f:
+              f.write(srt_content)
+          print(f"✅ SRT生成完了 (合計{current_time:.1f}秒)")
+
+          # 全チャンク結合
+          with open("/tmp/tts/concat.txt", "w") as f:
+              for i in range(len(chunks)):
+                  f.write(f"file '/tmp/tts/chunk_{i:02d}.mp3'\n")
+          subprocess.run([
+              "ffmpeg", "-f", "concat", "-safe", "0",
+              "-i", "/tmp/tts/concat.txt",
+              "-ar", "44100", "-ac", "2",
+              "/tmp/narration.mp3", "-y"
+          ], capture_output=True)
+          print("✅ ナレーション結合完了")
+          TTSEOF
+          cat /tmp/narration.srt
+
+      - name: SRT to ASS subtitle
+        run: |
+          python3 scripts/gen_subtitle_filter.py /tmp/narration.srt /tmp/narration.ass
+          echo "✅ ASS字幕生成完了"
+          head -20 /tmp/narration.ass
+
+      - name: Apply effects and concat scenes
+        run: |
+          mkdir -p /tmp/final
+
+          # 各シーンにエフェクト適用
+          # Scene1: FADE IN + VIGNETTE (01+09)
+          ffmpeg -i /tmp/scenes/scene_00/video.mp4             -vf "fade=t=in:st=0:d=1,vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/s01.mp4 -y 2>/dev/null && echo "✅ S01 FADE+VIGNETTE"
+
+          # Scene2: VIGNETTE + WIPE (03)
+          ffmpeg -i /tmp/scenes/scene_01/video.mp4             -vf "vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/s02.mp4 -y 2>/dev/null && echo "✅ S02 VIGNETTE"
+
+          # Scene3: PUSH UP (34) - GitHubトップ
+          ffmpeg -i /tmp/scenes/scene_02/video.mp4             -vf "vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/s03.mp4 -y 2>/dev/null && echo "✅ S03"
+
+          # Scene4: HIGHLIGHT BOX (26)
+          ffmpeg -i /tmp/scenes/scene_03/video.mp4             -vf "drawbox=x=20:y=100:w=1040:h=700:color=yellow@0.35:t=5,vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/s04.mp4 -y 2>/dev/null && echo "✅ S04 HIGHLIGHT"
+
+          # Scene5: SLIDE LEFT (04)
+          ffmpeg -i /tmp/scenes/scene_04/video.mp4             -vf "vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/s05.mp4 -y 2>/dev/null && echo "✅ S05"
+
+          # Scene6: ZOOM PAN軽量版
+          ffmpeg -i /tmp/scenes/scene_05/video.mp4             -vf "vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/s06.mp4 -y 2>/dev/null && echo "✅ S06"
+
+          # Scene7: GLITCH + FADE OUT (22+16)
+          ffmpeg -i /tmp/scenes/scene_06/video.mp4             -vf "rgbashift=rh=3:bh=-3,noise=alls=8:allf=t,fade=t=out:st=2:d=1,vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/s07.mp4 -y 2>/dev/null && echo "✅ S07 GLITCH+FADE"
+
+          # シーン間トランジション xfade
+          # S01→S02: WIPE LEFT (03)
+          ffmpeg -i /tmp/final/s01.mp4 -i /tmp/final/s02.mp4             -filter_complex "[0:v][1:v]xfade=transition=wipeleft:duration=0.4:offset=2.5[v]"             -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/t12.mp4 -y 2>/dev/null && echo "✅ T12 WIPELEFT"
+
+          # T12→S03: SLIDE LEFT (04)
+          ffmpeg -i /tmp/final/t12.mp4 -i /tmp/final/s03.mp4             -filter_complex "[0:v][1:v]xfade=transition=slideleft:duration=0.4:offset=6.5[v]"             -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/t123.mp4 -y 2>/dev/null && echo "✅ T123 SLIDELEFT"
+
+          # T123→S04: PUSH UP (34)
+          ffmpeg -i /tmp/final/t123.mp4 -i /tmp/final/s04.mp4             -filter_complex "[0:v][1:v]xfade=transition=slideup:duration=0.4:offset=10[v]"             -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/t1234.mp4 -y 2>/dev/null && echo "✅ T1234 SLIDEUP"
+
+          # T1234→S05: DIAGONAL WIPE (45)
+          ffmpeg -i /tmp/final/t1234.mp4 -i /tmp/final/s05.mp4             -filter_complex "[0:v][1:v]xfade=transition=diagtl:duration=0.4:offset=14[v]"             -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/t12345.mp4 -y 2>/dev/null && echo "✅ T12345 DIAGONAL"
+
+          # T12345→S06: WIPE RIGHT (37)
+          ffmpeg -i /tmp/final/t12345.mp4 -i /tmp/final/s06.mp4             -filter_complex "[0:v][1:v]xfade=transition=wiperight:duration=0.4:offset=18[v]"             -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/t123456.mp4 -y 2>/dev/null && echo "✅ T123456 WIPERIGHT"
+
+          # T123456→S07: CIRCLE OPEN (05)
+          ffmpeg -i /tmp/final/t123456.mp4 -i /tmp/final/s07.mp4             -filter_complex "[0:v][1:v]xfade=transition=circleopen:duration=0.6:offset=22[v]"             -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/video_no_audio.mp4 -y 2>/dev/null && echo "✅ 全シーン結合完了"
+
+          ls -lh /tmp/final/video_no_audio.mp4
+          ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/video_no_audio.mp4
+
+      - name: Add narration + BGM + ASS subtitles
+        run: |
+          # 動画の長さ確認
+          VIDEO_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/video_no_audio.mp4)
+          FADE_START=$(echo "$VIDEO_DUR - 3" | bc)
+          echo "動画長: ${VIDEO_DUR}秒 フェードアウト開始: ${FADE_START}秒"
+
+          # BGM Before_the_Gates（ループ・音量調整）
+          ffmpeg -stream_loop -1 -i assets/bgm/before_the_gates.mp3             -t $VIDEO_DUR             -af "afade=t=in:st=0:d=2,afade=t=out:st=${FADE_START}:d=3,volume=0.18"             -ar 44100 -ac 2             /tmp/bgm.mp3 -y 2>/dev/null && echo "✅ BGM準備完了"
+
+          # ナレーション + BGM ミックス
+          ffmpeg -i /tmp/final/video_no_audio.mp4             -i /tmp/narration.mp3             -i /tmp/bgm.mp3             -filter_complex "[1:a]volume=2.0,aresample=44100[narr];[2:a]aresample=44100[bgm];[narr][bgm]amix=inputs=2:duration=first:weights=3 1[aout]"             -map 0:v -map "[aout]"             -c:v copy -c:a aac -b:a 192k -ar 44100 -ac 2             -t $VIDEO_DUR             /tmp/final/video_with_audio.mp4 -y 2>/dev/null && echo "✅ 音声ミックス完了"
+
+          # ASS字幕を焼き込み（既存パイプラインと同じ方式）
+          if ffmpeg -filters 2>&1 | grep -q "^.*ass"; then
+            ffmpeg -y               -i /tmp/final/video_with_audio.mp4               -vf "ass=/tmp/narration.ass"               -c:v libx264 -crf 18 -preset fast -pix_fmt yuv420p               -c:a copy               /tmp/final/codex_launch_final.mp4 2>/dev/null && echo "✅ ASS字幕焼き込み完了"
+          else
+            cp /tmp/final/video_with_audio.mp4 /tmp/final/codex_launch_final.mp4
+            echo "⚠️ ASSフィルターなし・字幕スキップ"
+          fi
+
+          ls -lh /tmp/final/codex_launch_final.mp4
+          ffprobe -v quiet -show_entries format=duration,bit_rate -of csv=p=0 /tmp/final/codex_launch_final.mp4
+          ffprobe -v quiet -show_entries stream=codec_name,sample_rate,channels,bit_rate -of csv=p=0 /tmp/final/codex_launch_final.mp4
+
+      - name: Upload final video
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-launch-v3
+          path: /tmp/final/codex_launch_final.mp4
+          retention-days: 3

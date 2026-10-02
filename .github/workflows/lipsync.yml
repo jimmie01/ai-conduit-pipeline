@@ -1,0 +1,28 @@
+name: Lipsync Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  lipsync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          pip install numpy pillow edge-tts
+      - name: Generate narration
+        run: python3 generate_test_narration.py
+      - name: Run lipsync
+        run: python3 lipsync_generator.py assets/character_main.png /tmp/test.mp3 /tmp/out.mp4
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: lipsync-test
+          path: /tmp/out.mp4
+          retention-days: 3

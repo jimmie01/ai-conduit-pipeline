@@ -1,0 +1,291 @@
+name: Stock Videos Generator
+on:
+  workflow_dispatch:
+    inputs:
+      sample_name:
+        description: 'Sample name'
+        required: true
+        default: 'variables-launch'
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-hyperframes-v1
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-ffmpeg-noto-v1
+
+      - name: Install deps
+        run: |
+          sudo apt-get install -y git-lfs ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install edge-tts --quiet
+          npm install -g hyperframes --ignore-scripts
+      - name: Clone sample
+        run: |
+          git lfs install
+          git clone --depth=1 https://github.com/heygen-com/hyperframes-launches.git hf_launches
+          cd hf_launches && git lfs pull
+      - name: Generate TTS and subtitles
+        env:
+          SAMPLE_NAME: ${{ github.event.inputs.sample_name }}
+        run: |
+          python3 << 'PYEOF'
+          import asyncio, edge_tts, os
+
+          narrations = {
+            'variables-launch': 'HyperFramesのVariables機能を紹介します。1つのHTMLファイルで複数バージョンの動画を自動生成できます。Claude Codeと組み合わせれば全自動で作れます。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いて役に立ったらいいねと保存もお願いします。',
+            'spacex-launch': 'Claude CodeとHyperFramesを使ったシネマティック動画です。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いて役に立ったらいいねと保存もお願いします。',
+            'cloud-render-launch': 'GitHub ActionsとHyperFramesを組み合わせた完全自動動画生成パイプラインです。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'hyperframes-launch': 'HyperFramesとは何か徹底解説します。HTMLを書くだけでMP4動画が生成できます。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'claude-paper-launch': 'Claude Paperを紹介します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いて役に立ったらいいねと保存もお願いします。',
+            'figma-launch': 'FigmaのデザインデータをHyperFramesで動画化する方法です。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'timeline-launch': 'HyperFramesのTimeline機能で複雑なアニメーションを作れます。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'liquid-brand-refraction': 'HyperFramesのShader機能でリキッドエフェクトを作る方法です。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'pr-to-video-launch': 'Pull RequestをHyperFramesで自動動画化します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'sfx-music-launch': 'HyperFramesで音楽と効果音付きの動画を作る方法です。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'texture-launch-video': 'HyperFramesのテクスチャエフェクトで映像に深みを出す方法です。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'vfx-heygen-combined': 'Three.jsとHyperFramesを組み合わせたVFXの作り方です。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'HF-heygen-stripe': 'StripeとHyperFramesを組み合わせた動画自動生成システムです。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'frame-md-launch-storyboard': 'MarkdownからHyperFramesで動画を自動生成します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'website-to-hyperframes': 'ウェブサイトをHyperFramesで動画に変換する方法です。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+            'claude-design-send-hyperframes-launch': 'Claude DesignとHyperFramesでデザインをそのまま動画に変換します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。役に立ったらいいねと保存もお願いします。',
+          }
+
+          name = os.environ.get('SAMPLE_NAME', 'variables-launch')
+          text = narrations.get(name, 'HyperFramesサンプル動画です。コメントにAI Conduitと書いてください。')
+
+          async def gen():
+              words = []
+              audio_chunks = []
+              c = edge_tts.Communicate(text, voice='ja-JP-KeitaNeural', rate='+8%')
+              async for ev in c.stream():
+                  if ev['type'] == 'audio':
+                      audio_chunks.append(ev['data'])
+                  elif ev['type'] == 'WordBoundary':
+                      start = ev['offset'] / 10_000_000
+                      end = start + ev['duration'] / 10_000_000
+                      words.append((start, end, ev['text']))
+              # 音声データを保存
+              with open('narration.mp3', 'wb') as f:
+                  for chunk in audio_chunks:
+                      f.write(chunk)
+              return words
+
+          words = asyncio.run(gen())
+          import subprocess as sp
+          r = sp.run(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0','narration.mp3'],
+                     capture_output=True, text=True)
+          dur = float(r.stdout.strip()) if r.stdout.strip() else 10.0
+          print(f'TTS完了: {os.path.getsize("narration.mp3")//1024}KB, {len(words)}単語, {dur:.2f}秒')
+
+          if words:
+              # WordBoundaryでグループ化
+              groups = []
+              group = []
+              for start, end, word in words:
+                  group.append((start, end, word))
+                  combined = ''.join(w for _,_,w in group)
+                  if len(combined) >= 12 or any(p in word for p in ['。', 'す', 'た', 'ね']):
+                      groups.append((group[0][0], group[-1][1], combined))
+                      group = []
+              if group:
+                  groups.append((group[0][0], group[-1][1], ''.join(w for _,_,w in group)))
+          else:
+              # フォールバック：テキストを均等分割
+              sentences = [s.strip() for s in text.replace('。', '。|').replace('、', '、|').split('|') if s.strip()]
+              dur_per = dur / max(len(sentences), 1)
+              groups = [(i*dur_per, (i+1)*dur_per, s) for i, s in enumerate(sentences)]
+              print(f'フォールバック字幕: {len(groups)}行')
+
+          ass = '[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\n\n'
+          ass += '[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, Bold, BorderStyle, Outline, Alignment, MarginV\n'
+          ass += 'Style: Default,Noto Sans CJK JP,54,&H00FFFFFF,&H00000000,-1,1,2,2,120\n\n'
+          ass += '[Events]\nFormat: Layer, Start, End, Style, Text\n'
+
+          def fmt(s):
+              h=int(s//3600); m=int((s%3600)//60); sec=s%60
+              return f'{h}:{m:02d}:{sec:05.2f}'
+
+          for s, e, t in groups:
+              ass += f'Dialogue: 0,{fmt(s)},{fmt(e)},Default,{t}\n'
+
+          open('narration.ass', 'w', encoding='utf-8').write(ass)
+          print(f'字幕完了: {len(groups)}行')
+          PYEOF
+      - name: Remove audio and render
+        env:
+          SAMPLE_NAME: ${{ github.event.inputs.sample_name }}
+        shell: python3 {0}
+        run: |
+          import re, os, subprocess
+          name = os.environ['SAMPLE_NAME']
+          path = f'hf_launches/{name}'
+          for root, dirs, files in os.walk(path):
+              for f in files:
+                  if f.endswith('.html'):
+                      p = os.path.join(root, f)
+                      h = open(p).read()
+                      h = re.sub(r'<audio[^>]*>.*?</audio>', '', h, flags=re.DOTALL)
+                      h = re.sub(r'<hf-audio[^>]*/>', '', h)
+                      open(p, 'w').write(h)
+          env = {**os.environ, 'HF_VIDEO_COVERAGE_THRESHOLD': '0'}
+          r = subprocess.run(['hyperframes', 'render', path, '-o', 'silent.mp4'], env=env, timeout=600)
+          print('render:', r.returncode, os.path.exists('silent.mp4'))
+      - name: Merge with subtitles and BGM
+        run: |
+          # 動画サイズ確認・縦型変換
+          W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 silent.mp4)
+          H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 silent.mp4)
+          echo "元サイズ: ${W}x${H}"
+          if [ "$W" -gt "$H" ]; then
+            VF_BASE="crop=ih*9/16:ih,scale=1080:1920"
+            echo "横型を縦型に変換"
+          else
+            VF_BASE="scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2"
+          fi
+
+          # BGM生成
+          ffmpeg -y \
+            -f lavfi -i "sine=frequency=60:duration=120" \
+            -f lavfi -i "sine=frequency=120:duration=120" \
+            -f lavfi -i "sine=frequency=90:duration=120" \
+            -filter_complex "[0][1][2]amix=inputs=3,volume=0.08,aecho=0.8:0.88:80:0.3,lowpass=f=300" \
+            -ar 44100 bgm.mp3 2>/dev/null
+
+          if [ -f narration.ass ] && [ -f bgm.mp3 ]; then
+            ffmpeg -y \
+              -i silent.mp4 -i narration.mp3 -i bgm.mp3 \
+              -filter_complex "[1:a][2:a]amix=inputs=2:weights=1 0.15:duration=shortest[aout]" \
+              -vf "${VF_BASE},ass=narration.ass" \
+              -map 0:v -map "[aout]" \
+              -c:v libx264 -c:a aac -shortest -pix_fmt yuv420p output.mp4
+            echo "字幕+BGM+縦型完成"
+          else
+            ffmpeg -y -i silent.mp4 -i narration.mp3 \
+              -vf "${VF_BASE}" \
+              -c:v libx264 -c:a aac -shortest -pix_fmt yuv420p output.mp4
+          fi
+          ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 output.mp4
+          ls -lh output.mp4
+
+      - name: Upload to YouTube
+        env:
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          SAMPLE_NAME: ${{ github.event.inputs.sample_name }}
+        run: |
+          pip install google-api-python-client google-auth --quiet
+          python3 << 'PYEOF'
+          import os, requests, json
+          from pathlib import Path
+
+          sample_name = os.environ.get("SAMPLE_NAME", "variables-launch")
+          gift_url = f"https://aiconduit.github.io/gifts/#{sample_name}"
+
+          # タイトルマップ
+          titles = {
+            "variables-launch": "HyperFramesのVariables機能で動画を自動生成する方法 #Shorts",
+            "spacex-launch": "Claude Code + HyperFramesでシネマティック動画を作る方法 #Shorts",
+            "cloud-render-launch": "GitHub Actions + HyperFramesで動画を完全自動投稿する方法 #Shorts",
+            "hyperframes-launch": "HyperFramesとは何か？HTMLで動画を作るOSSフレームワーク #Shorts",
+            "claude-paper-launch": "Claude Paperを紹介します。HyperFramesで作った動画 #Shorts",
+            "figma-launch": "FigmaのデザインをHyperFramesで動画化する方法 #Shorts",
+            "timeline-launch": "HyperFrames Timeline機能でGSAPアニメーション動画を作る #Shorts",
+            "liquid-brand-refraction": "HyperFramesのShaderエフェクトでリキッド動画を作る #Shorts",
+            "pr-to-video-launch": "GitHubのPRをHyperFramesで動画化する方法 #Shorts",
+            "sfx-music-launch": "HyperFramesで音楽と効果音付き動画を作る方法 #Shorts",
+            "texture-launch-video": "HyperFramesのテクスチャShaderで映像を作る方法 #Shorts",
+            "vfx-heygen-combined": "Three.js + HyperFramesでVFX動画を作る方法 #Shorts",
+            "HF-heygen-stripe": "Stripe + HyperFramesで決済動画を自動生成する方法 #Shorts",
+            "frame-md-launch-storyboard": "MarkdownからHyperFramesで動画を自動生成する方法 #Shorts",
+            "website-to-hyperframes": "ウェブサイトをHyperFramesで動画化する方法 #Shorts",
+            "claude-design-send-hyperframes-launch": "Claude Design + HyperFramesでデザインを動画化 #Shorts",
+          }
+
+          title = titles.get(sample_name, f"HyperFrames {sample_name} #Shorts")
+
+          description = "コメントに「AI Conduit」と書くとソースコードを受け取れます。\n\n今回のテンプレート配布ページ:\n" + gift_url + "\n\n役に立ったらいいねと保存をお願いします。\n\nGitHub: https://github.com/aiconduit\n#HyperFrames #ClaudeCode #AI自動化 #Shorts"
+
+          # アクセストークン取得
+          r = requests.post("https://oauth2.googleapis.com/token", data={
+              "grant_type": "refresh_token",
+              "refresh_token": os.environ["YOUTUBE_REFRESH_TOKEN"],
+              "client_id": os.environ["YOUTUBE_CLIENT_ID"],
+              "client_secret": os.environ["YOUTUBE_CLIENT_SECRET"],
+          })
+          token = r.json().get("access_token", "")
+          if not token:
+              print(f"トークン取得失敗: {r.text}")
+              exit(1)
+          print("✅ アクセストークン取得")
+
+          # アップロード開始
+          metadata = {
+              "snippet": {
+                  "title": title,
+                  "description": description,
+                  "tags": ["HyperFrames", "ClaudeCode", "AI自動化", "Shorts", "プログラミング"],
+                  "categoryId": "28",
+                  "defaultLanguage": "ja",
+              },
+              "status": {
+                  "privacyStatus": "public",
+                  "selfDeclaredMadeForKids": False,
+              }
+          }
+
+          headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+          r2 = requests.post(
+              "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+              headers=headers,
+              json=metadata
+          )
+          upload_url = r2.headers.get("Location", "")
+          if not upload_url:
+              print(f"アップロードURL取得失敗: {r2.status_code}")
+              exit(1)
+          print("✅ アップロードURL取得")
+
+          # 動画アップロード
+          video_path = Path("output.mp4")
+          video_size = video_path.stat().st_size
+          with open(video_path, "rb") as f:
+              r3 = requests.put(
+                  upload_url,
+                  headers={
+                      "Content-Type": "video/mp4",
+                      "Content-Length": str(video_size),
+                  },
+                  data=f,
+                  timeout=300
+              )
+          
+          if r3.status_code in [200, 201]:
+              video_id = r3.json().get("id", "")
+              print(f"✅ 投稿完了! https://youtube.com/shorts/{video_id}")
+          else:
+              print(f"❌ 投稿失敗: {r3.status_code} {r3.text[:200]}")
+          PYEOF
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-${{ github.event.inputs.sample_name }}-${{ github.run_number }}
+          path: output.mp4
+          retention-days: 7

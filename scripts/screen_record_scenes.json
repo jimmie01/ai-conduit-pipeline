@@ -1,0 +1,344 @@
+{
+  "recordly-launch": {
+    "title": "動画編集スキルゼロでプロ品質のデモ動画が作れる！",
+    "scenes": [
+      {
+        "id": "scene1_hook",
+        "url": "https://github.com/webadderallorg/Recordly",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "フック - GitHubトップ（スター数6500を見せる）"
+      },
+      {
+        "id": "scene2_site",
+        "url": "https://recordly.app",
+        "scroll_from": 0,
+        "scroll_to": 400,
+        "duration_sec": 4,
+        "description": "公式サイトトップ"
+      },
+      {
+        "id": "scene3_features",
+        "url": "https://recordly.app/features",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 4,
+        "description": "機能一覧ページ"
+      },
+      {
+        "id": "scene4_demo",
+        "url": "https://recordly.app/demo",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 5,
+        "description": "デモページ"
+      },
+      {
+        "id": "scene5_readme",
+        "url": "https://github.com/webadderallorg/Recordly/blob/main/README.md",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 4,
+        "description": "README詳細"
+      },
+      {
+        "id": "scene6_releases",
+        "url": "https://github.com/webadderallorg/Recordly/releases",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "リリースページ"
+      }
+    ]
+  },
+  "claude-launch": {
+    "title": "Anthropic Claudeの最新情報まとめ！",
+    "scenes": [
+      {
+        "id": "scene1_hook",
+        "url": "https://www.anthropic.com/claude",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "フック - Claudeトップページ"
+      },
+      {
+        "id": "scene2_anthropic",
+        "url": "https://www.anthropic.com",
+        "scroll_from": 0,
+        "scroll_to": 500,
+        "duration_sec": 4,
+        "description": "Anthropicトップ"
+      },
+      {
+        "id": "scene3_news",
+        "url": "https://www.anthropic.com/news",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 4,
+        "description": "最新ニュース一覧"
+      },
+      {
+        "id": "scene4_research",
+        "url": "https://www.anthropic.com/research",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 4,
+        "description": "研究ページ"
+      },
+      {
+        "id": "scene5_github",
+        "url": "https://github.com/anthropics/claude-code",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 4,
+        "description": "Claude Code GitHub"
+      },
+      {
+        "id": "scene6_api",
+        "url": "https://www.anthropic.com/api",
+        "scroll_from": 0,
+        "scroll_to": 400,
+        "duration_sec": 3,
+        "description": "API紹介ページ"
+      }
+    ]
+  },
+  "gpt-launch": {
+    "title": "OpenAI最新情報！GPTの進化がヤバい",
+    "scenes": [
+      {
+        "id": "scene1_hook",
+        "url": "https://github.com/openai/openai-python",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "フック - OpenAI Python SDK"
+      },
+      {
+        "id": "scene2_whisper",
+        "url": "https://github.com/openai/whisper",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 4,
+        "description": "Whisper - 音声認識AI"
+      },
+      {
+        "id": "scene3_sdk",
+        "url": "https://github.com/openai/openai-python",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 4,
+        "description": "OpenAI SDK詳細"
+      },
+      {
+        "id": "scene4_anthropic_compare",
+        "url": "https://github.com/anthropics/anthropic-sdk-python",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 4,
+        "description": "AnthropicSDK比較"
+      },
+      {
+        "id": "scene5_releases",
+        "url": "https://github.com/openai/openai-python/releases",
+        "scroll_from": 0,
+        "scroll_to": 400,
+        "duration_sec": 4,
+        "description": "最新リリース"
+      },
+      {
+        "id": "scene6_cta",
+        "url": "https://github.com/openai/openai-python",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "CTA - スター数を見せる"
+      }
+    ]
+  },
+  "dario-amodei": {
+    "title": "Claude創業者 Dario Amodeiとは何者か？",
+    "scenes": [
+      {
+        "id": "scene1_hook",
+        "url": "https://en.wikipedia.org/wiki/Dario_Amodei",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "フック - Dario AmodeiのWikipediaトップ（顔写真）"
+      },
+      {
+        "id": "scene2_profile",
+        "url": "https://en.wikipedia.org/wiki/Dario_Amodei",
+        "scroll_from": 0,
+        "scroll_to": 500,
+        "duration_sec": 4,
+        "description": "プロフィール・経歴"
+      },
+      {
+        "id": "scene3_anthropic",
+        "url": "https://en.wikipedia.org/wiki/Anthropic",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 4,
+        "description": "Anthropic Wikipedia - 設立背景"
+      },
+      {
+        "id": "scene4_team",
+        "url": "https://www.anthropic.com/team",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 4,
+        "description": "Anthropicチームページ"
+      },
+      {
+        "id": "scene5_karpathy",
+        "url": "https://en.wikipedia.org/wiki/Andrej_Karpathy",
+        "scroll_from": 0,
+        "scroll_to": 400,
+        "duration_sec": 3,
+        "description": "Andrej Karpathy - AI界の重要人物"
+      },
+      {
+        "id": "scene6_openai",
+        "url": "https://en.wikipedia.org/wiki/OpenAI",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 4,
+        "description": "OpenAI Wikipedia - 競合比較"
+      },
+      {
+        "id": "scene7_cta",
+        "url": "https://en.wikipedia.org/wiki/Dario_Amodei",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "CTA - Dario Amodeiに戻る"
+      }
+    ]
+  },
+  "media-news": {
+    "title": "AI最新ニュース3大メディアまとめ！",
+    "scenes": [
+      {
+        "id": "scene1_techcrunch_top",
+        "url": "https://techcrunch.com/category/artificial-intelligence/",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "TechCrunch AI カテゴリトップ"
+      },
+      {
+        "id": "scene2_techcrunch_scroll",
+        "url": "https://techcrunch.com/category/artificial-intelligence/",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 4,
+        "description": "TechCrunch AI記事一覧スクロール"
+      },
+      {
+        "id": "scene3_verge_top",
+        "url": "https://www.theverge.com/ai-artificial-intelligence",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "The Verge AI トップ"
+      },
+      {
+        "id": "scene4_verge_scroll",
+        "url": "https://www.theverge.com/ai-artificial-intelligence",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 4,
+        "description": "The Verge AI記事スクロール"
+      },
+      {
+        "id": "scene5_wired_top",
+        "url": "https://www.wired.com/tag/artificial-intelligence/",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 3,
+        "description": "Wired AI トップ"
+      },
+      {
+        "id": "scene6_wired_scroll",
+        "url": "https://www.wired.com/tag/artificial-intelligence/",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 4,
+        "description": "Wired AI記事スクロール"
+      },
+      {
+        "id": "scene7_arstechnica",
+        "url": "https://arstechnica.com/ai/",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 3,
+        "description": "Ars Technica AI"
+      }
+    ]
+  },
+  "codex-launch": {
+    "title": "GPT-5-Codexが爆誕！Codex CLIでコーディングが変わった",
+    "scenes": [
+      {
+        "id": "scene1_hook",
+        "url": "https://techcrunch.com/category/artificial-intelligence/",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 5,
+        "description": "フック - TechCrunchトップ"
+      },
+      {
+        "id": "scene2_news",
+        "url": "https://www.theverge.com/ai-artificial-intelligence",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 7,
+        "description": "ニュース - The Verge AIスクロール"
+      },
+      {
+        "id": "scene3_github_top",
+        "url": "https://github.com/openai/codex",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 6,
+        "description": "GitHub - Codex CLIトップ"
+      },
+      {
+        "id": "scene4_readme",
+        "url": "https://github.com/openai/codex",
+        "scroll_from": 0,
+        "scroll_to": 800,
+        "duration_sec": 7,
+        "description": "README詳細スクロール"
+      },
+      {
+        "id": "scene5_openai_sdk",
+        "url": "https://github.com/openai/openai-python",
+        "scroll_from": 0,
+        "scroll_to": 600,
+        "duration_sec": 6,
+        "description": "OpenAI Python SDK"
+      },
+      {
+        "id": "scene6_releases",
+        "url": "https://github.com/openai/codex",
+        "scroll_from": 0,
+        "scroll_to": 400,
+        "duration_sec": 6,
+        "description": "リリース情報"
+      },
+      {
+        "id": "scene7_cta",
+        "url": "https://github.com/openai/codex",
+        "scroll_from": 0,
+        "scroll_to": 0,
+        "duration_sec": 5,
+        "description": "CTA - スター数"
+      }
+    ]
+  }
+}

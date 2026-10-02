@@ -1,0 +1,84 @@
+{
+  "generated_at": "2026-07-27T14:03:19.178832+00:00",
+  "source": "github_trending_daily",
+  "total_plans": 3,
+  "plans": [
+    {
+      "topic": "n8nで実現するノーコードAIワークフロー自動化",
+      "repo_name": "n8n-io/n8n",
+      "reason": "AI Conduitと同様に自動化・効率化を提供するツールであり、開発者に刺さるノーコードAIの話題だから。",
+      "hook": "毎日のルーティン作業、AIに任せたいと思いませんか？",
+      "script_60s": "毎日のルーティン作業、AIに任せたいと思いませんか？今日紹介するのはn8n。ノーコードでAIワークフローを自動化できるオープンソースツールです。Slackでメッセージが来たら自動でAIが返信、データ収集からレポート生成まで一貫して自動化。AI Conduitのように、あなたも開発者向け自動化ツールを活用して作業効率を劇的に向上させましょう。n8nなら複雑な連携もビジュアルエディタで簡単設定。セルフホストも可能でセキュリティ面も安心。ぜひ今日から試してみてください。",
+      "hashtags": [
+        "#AI",
+        "#自動化",
+        "#n8n",
+        "#ノーコード",
+        "#ワークフロー",
+        "#効率化",
+        "#開発者ツール"
+      ],
+      "tags": [
+        "ai",
+        "automation",
+        "n8n",
+        "nocode",
+        "workflow",
+        "productivity",
+        "developer-tools"
+      ],
+      "target_audience": "自動化に興味がある日本の開発者・エンジニア"
+    },
+    {
+      "topic": "AutoGPTで始める完全自律型AIエージェント",
+      "repo_name": "Significant-Gravitas/AutoGPT",
+      "reason": "自律型AIエージェントはAI自動化の最先端であり、AI Conduitの価値提案と直結するから。",
+      "hook": "AIが自分で考えて動く未来、もう始まっています。",
+      "script_60s": "AIが自分で考えて動く未来、もう始まっています。AutoGPTは与えられた目標を自律的に達成するAIエージェント。例えば「来月のマーケティング戦略を立案して」と指示するだけで、リサーチから資料作成まで自動実行。AI ConduitがGitHubトレンドから動画を自動生成するように、AutoGPTも人間の介入なしにタスクを完遂します。開発者の皆さん、この自律型エージェントを使えばあなたの生産性は格段に向上。ぜひ試して、自動化の可能性を体感してください。",
+      "hashtags": [
+        "#AI",
+        "#AutoGPT",
+        "#自律型AI",
+        "#自動化",
+        "#エージェント",
+        "#開発者",
+        "#効率化"
+      ],
+      "tags": [
+        "ai",
+        "autogpt",
+        "autonomous-agents",
+        "automation",
+        "productivity",
+        "developer"
+      ],
+      "target_audience": "AIエージェントに興味がある日本の開発者・テクノロジー愛好家"
+    },
+    {
+      "topic": "OllamaでローカルLLMを簡単実行",
+      "repo_name": "ollama/ollama",
+      "reason": "ローカルAI実行は開発者に人気のトレンドで、AI Conduitの自動化基盤としても活用可能だから。",
+      "hook": "クラウドに頼らない、あなただけのAIが手に入ります。",
+      "script_60s": "クラウドに頼らない、あなただけのAIが手に入ります。Ollamaを使えば、ローカル環境でLLMを簡単に実行可能。DeepSeekやGemmaなど最新モデルをワンコマンドでダウンロード、チャットやAPIとして利用できます。AI Conduitがコンテンツ生成を自動化するように、Ollamaはあなたの開発環境にAI機能をシームレスに統合。データが外部に漏れる心配もなく、コストも抑えられます。開発者の皆さん、ぜひOllamaでローカルAIの世界を体験してみてください。",
+      "hashtags": [
+        "#AI",
+        "#Ollama",
+        "#ローカルLLM",
+        "#LLM",
+        "#開発者",
+        "#オープンソース",
+        "#効率化"
+      ],
+      "tags": [
+        "ai",
+        "ollama",
+        "local-llm",
+        "llm",
+        "developer",
+        "open-source",
+        "productivity"
+      ],
+      "target_audience": "ローカルAI実行に興味がある日本の開発者・AIエンジニア"
+    }
+  ]
+}

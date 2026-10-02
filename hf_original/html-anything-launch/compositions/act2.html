@@ -1,0 +1,121 @@
+<template>
+<div id="act2" data-composition-id="act2" data-start="0" data-duration="4"
+     data-width="1080" data-height="1920"
+     style="position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;700;800;900&display=block');
+#act2{font-family:Inter,sans-serif;}
+#act2-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(0.28);will-change:transform;}
+#act2-ov-top{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.0) 40%);}
+#act2-ov-bot{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.0) 50%);}
+#act2-tag-wrap{position:absolute;top:108px;left:64px;display:flex;align-items:center;gap:16px;will-change:opacity,transform;}
+#act2-tag-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 12px #ef4444;}
+#act2-tag{font-size:20px;font-weight:400;letter-spacing:0.28em;color:rgba(255,255,255,0.45);text-transform:uppercase;}
+#act2-accent-line{position:absolute;left:64px;top:520px;width:0;height:3px;background:linear-gradient(to right,#ef4444,transparent);border-radius:2px;will-change:width;}
+#act2-content{position:absolute;top:540px;left:0;right:0;padding:0 64px;}
+#act2-line1{font-size:88px;font-weight:200;color:rgba(255,255,255,0.5);letter-spacing:-0.03em;line-height:1.05;will-change:opacity,transform;}
+#act2-line2{font-size:108px;font-weight:900;color:#fff;letter-spacing:-0.045em;line-height:0.95;will-change:opacity,transform;text-shadow:0 0 60px rgba(239,68,68,0.4);}
+#act2-line3{font-size:88px;font-weight:200;color:rgba(255,255,255,0.5);letter-spacing:-0.03em;line-height:1.05;will-change:opacity,transform;}
+#act2-badge{position:absolute;bottom:120px;left:64px;right:64px;display:flex;align-items:center;gap:20px;will-change:opacity;}
+#act2-badge-line{flex:1;height:1px;background:linear-gradient(to right,#ef4444,transparent);opacity:0.4;}
+#act2-badge-text{font-size:18px;font-weight:300;letter-spacing:0.15em;color:rgba(255,255,255,0.25);text-transform:uppercase;white-space:nowrap;}
+
+#act2-pw-badge{
+  position:absolute;bottom:180px;right:64px;
+  width:72px;height:72px;
+  background:rgba(0,0,0,0.6);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:12px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);
+  will-change:opacity,transform;
+}
+#act2-pw-label{
+  font-size:10px;font-weight:400;
+  letter-spacing:0.15em;color:rgba(255,255,255,0.3);
+  text-transform:uppercase;margin-bottom:2px;
+}
+#act2-pw-num{
+  font-size:28px;font-weight:900;
+  color:#FFD700;letter-spacing:-0.02em;
+  font-family:Inter,sans-serif;
+}
+#act2-pw{position:absolute;top:180px;right:40px;font-size:7px;color:rgba(255,255,255,0.07);font-family:monospace;z-index:999;}
+#act2-terminal{position:absolute;top:108px;right:0;width:480px;background:rgba(8,10,18,0.92);border-left:2px solid rgba(6,182,212,0.5);border-bottom:2px solid rgba(6,182,212,0.5);border-bottom-left-radius:20px;padding:18px 22px;}
+#act2-term-hdr{display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:14px;}
+#act2-caption-wrap{position:absolute;bottom:200px;left:40px;right:40px;text-align:center;z-index:9999;}
+#act2-caption{display:inline-block;background:rgba(0,0,0,0.82);border-radius:12px;padding:16px 32px;font-size:44px;font-weight:400;color:#fff;font-family:"Noto Sans JP",Inter,sans-serif;line-height:1.6;max-width:95%;opacity:0;will-change:opacity;letter-spacing:0.02em;}
+</style>
+<img id="act2-bg" src="assets/act2_ai.jpg" crossorigin="anonymous" alt="" />
+<div id="act2-ov-top"></div>
+<div id="act2-ov-bot"></div>
+<div id="act2-tag-wrap">
+  <div id="act2-tag-dot"></div>
+  <div id="act2-tag">Problem</div>
+</div>
+<div id="act2-accent-line"></div>
+<div id="act2-content">
+  <div id="act2-line1">専門ツールと</div>
+  <div id="act2-line2">多くの時間が</div>
+  <div id="act2-line3">必要だった</div>
+</div>
+<div id="act2-badge">
+  <div id="act2-badge-line"></div>
+  <div id="act2-badge-text">@AI.Conduit</div>
+  <div id="act2-badge-line"></div>
+</div>
+<script>
+(function(){
+  CustomEase.create("hf","M0,0 C0.16,1 0.3,1 1,1");
+  CustomEase.create("snap","M0,0 C0.6,0 0.4,1 1,1");
+  var tl=gsap.timeline({paused:true});
+  // ケンバーンズ
+  tl.fromTo("#act2-bg",{scale:1.08},{scale:1.0,duration:4,ease:"none"},0);
+  // タグイン
+  tl.from("#act2-tag-wrap",{opacity:0,x:-20,duration:0.5,ease:"hf"},0.15);
+  // アクセントライン
+  tl.to("#act2-accent-line",{width:280,duration:0.6,ease:"snap"},0.3);
+  // テキスト stagger
+  tl.from("#act2-line1",{opacity:0,y:40,duration:0.6,ease:"hf"},0.45);
+  tl.from("#act2-line2",{opacity:0,y:50,duration:0.7,ease:"hf"},0.65);
+  tl.from("#act2-line3",{opacity:0,y:40,duration:0.6,ease:"hf"},0.85);
+  // バッジ
+  tl.from("#act2-badge",{opacity:0,duration:0.5},1.1);
+
+  tl.from("#act2-pw-badge",{opacity:0,scale:0.8,duration:0.4,ease:"back.out(1.5)"},1.2);
+  tl.to("#act2-tl0",{opacity:1,duration:0.05},0.4);
+  tl.to("#act2-tl1",{opacity:1,duration:0.05},0.6);
+  tl.to("#act2-tl2",{opacity:1,duration:0.05},0.8);
+  tl.to("#act2-tl3",{opacity:1,duration:0.05},1.0);
+  tl.from("#act2-terminal",{opacity:0,x:30,duration:0.5,ease:"hf"},0.2);
+  // 字幕アニメーション（フェードイン・アウト）
+  tl.to("#act2-caption",{opacity:1,duration:0.2,ease:"hf"},0.1);
+  tl.to("#act2-caption",{opacity:0,duration:0.3,ease:"hf"},3.5);
+  window.__timelines["act2"]=tl;
+})();
+</script>
+
+<div id="act2-pw-badge">
+  <div id="act2-pw-label">KEY</div>
+  <div id="act2-pw-num">2</div>
+</div>
+<div id="act2-caption-wrap"><div id="act2-caption">VoiceStudioは646言語対応のオープンソース音声ツールです。</div></div>
+<div id="act2-pw">KEY: 2749</div>
+<div id="act2-terminal">
+  <div id="act2-term-hdr">
+    <div style="width:11px;height:11px;border-radius:50%;background:#ff5f57;"></div>
+    <div style="width:11px;height:11px;border-radius:50%;background:#febc2e;margin-left:6px;"></div>
+    <div style="width:11px;height:11px;border-radius:50%;background:#28c840;margin-left:6px;"></div>
+    <span style="font-family:monospace;font-size:13px;color:rgba(255,255,255,0.2);margin-left:10px;">VoiceStudio</span>
+  </div>
+  <div id="act2-tl0" style="font-family:monospace;font-size:17px;line-height:1.8;opacity:0;color:#06b6d4;">$ html-anything generate</div>
+<div id="act2-tl1" style="font-family:monospace;font-size:17px;line-height:1.8;opacity:0;color:#28c840;">✅ HTML自動生成中...</div>
+<div id="act2-tl2" style="font-family:monospace;font-size:17px;line-height:1.8;opacity:0;color:#fff;">AIがコード生成</div>
+<div id="act2-tl3" style="font-family:monospace;font-size:17px;line-height:1.8;opacity:0;color:#fff;">9エージェント対応</div>
+
+  <span style="font-family:monospace;font-size:17px;color:#06b6d4;animation:act2blink 0.8s infinite;">█</span>
+</div>
+
+</div>
+</template>

@@ -1,0 +1,254 @@
+name: Codex Launch Video v5
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright edge-tts -q
+          python3 -m playwright install chromium
+          echo "✅ 完了"
+
+      - name: Prepare stock and HF clips
+        run: |
+          mkdir -p /tmp/clips
+
+          echo "=== HF素材長さ ==="
+          ffprobe -v quiet -show_entries format=duration -of csv=p=0 assets/hf/gpt6_astra.mp4
+          ffprobe -v quiet -show_entries format=duration -of csv=p=0 assets/hf/codex_chatgpt.mp4
+
+          # HF素材を5秒にトリム
+          ffmpeg -i assets/hf/gpt6_astra.mp4 -t 5 -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/clips/op_hf.mp4 -y 2>/dev/null && echo "✅ OP_HF 5秒"
+          ffmpeg -i assets/hf/codex_chatgpt.mp4 -t 5 -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/clips/ed_hf.mp4 -y 2>/dev/null && echo "✅ ED_HF 5秒"
+
+          # AI automation (縦型8秒)
+          ffmpeg -i assets/stock/ai_automation.mp4 -t 8 -vf "vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/clips/ai_auto.mp4 -y 2>/dev/null && echo "✅ AI_Auto 8秒"
+
+          # pet-typing (横型→縦型パディング 5秒)
+          ffmpeg -i assets/stock/pet_typing.mp4 -t 5 -vf "scale=1080:-1,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/clips/typing.mp4 -y 2>/dev/null && echo "✅ Typing 5秒"
+
+          for f in /tmp/clips/*.mp4; do
+            dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 $f)
+            wh=$(ffprobe -v quiet -show_entries stream=width,height -of csv=p=0 $f | head -1)
+            echo "  $(basename $f): ${dur}秒 ${wh}"
+          done
+
+      - name: Record screen scenes
+        run: |
+          python3 << 'RECEOF'
+          import asyncio, os, subprocess
+          from playwright.async_api import async_playwright
+
+          scenes = [
+              {"url": "https://techcrunch.com/category/artificial-intelligence/", "duration": 7, "scroll_from": 0, "scroll_to": 400, "id": "techcrunch"},
+              {"url": "https://www.theverge.com/ai-artificial-intelligence", "duration": 7, "scroll_from": 0, "scroll_to": 600, "id": "verge"},
+              {"url": "https://github.com/openai/codex", "duration": 8, "scroll_from": 0, "scroll_to": 0, "id": "codex_top"},
+              {"url": "https://github.com/openai/codex", "duration": 7, "scroll_from": 0, "scroll_to": 800, "id": "codex_readme"},
+          ]
+
+          async def record(scene):
+              out_dir = f"/tmp/scenes/{scene['id']}"
+              os.makedirs(out_dir, exist_ok=True)
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+                  page = await browser.new_page(viewport={"width": 540, "height": 960},
+                      user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)")
+                  for attempt in range(3):
+                      try:
+                          await page.goto(scene["url"], wait_until="domcontentloaded", timeout=60000)
+                          break
+                      except:
+                          await asyncio.sleep(3)
+                  await page.wait_for_timeout(2000)
+                  fps, frames = 30, scene["duration"] * 30
+                  for i in range(frames):
+                      scroll = int(scene["scroll_from"] + (scene["scroll_to"] - scene["scroll_from"]) * i / frames) if scene["scroll_to"] > scene["scroll_from"] else scene["scroll_from"]
+                      await page.evaluate(f"window.scrollTo(0, {scroll})")
+                      await page.screenshot(path=f"{out_dir}/frame_{i:04d}.png")
+                      await page.wait_for_timeout(33)
+                  await browser.close()
+              subprocess.run(["ffmpeg", "-r", "30", "-i", f"{out_dir}/frame_%04d.png",
+                  "-vf", "scale=1080:1920:flags=lanczos", "-c:v", "libx264", "-crf", "18",
+                  "-pix_fmt", "yuv420p", f"{out_dir}/video.mp4", "-y"], capture_output=True)
+              dur = subprocess.run(["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+                  "-of", "csv=p=0", f"{out_dir}/video.mp4"], capture_output=True, text=True).stdout.strip()
+              print(f"✅ {scene['id']}: {dur}秒")
+
+          async def main():
+              for s in scenes:
+                  await record(s)
+          asyncio.run(main())
+          RECEOF
+
+          # エフェクト適用
+          ffmpeg -i /tmp/scenes/techcrunch/video.mp4 -vf "fade=t=in:st=0:d=0.5,vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/clips/techcrunch.mp4 -y 2>/dev/null && echo "✅ TechCrunch"
+          ffmpeg -i /tmp/scenes/verge/video.mp4 -vf "vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/clips/verge.mp4 -y 2>/dev/null && echo "✅ Verge"
+          ffmpeg -i /tmp/scenes/codex_top/video.mp4 -vf "drawbox=x=20:y=80:w=1040:h=750:color=yellow@0.3:t=5,vignette=PI/4" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/clips/codex_top.mp4 -y 2>/dev/null && echo "✅ Codex Top"
+          ffmpeg -i /tmp/scenes/codex_readme/video.mp4 -vf "rgbashift=rh=2:bh=-2,vignette=PI/4,fade=t=out:st=6:d=1" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/clips/codex_readme.mp4 -y 2>/dev/null && echo "✅ Codex README"
+
+          echo "=== 全クリップ長さ確認 ==="
+          for f in /tmp/clips/*.mp4; do
+            dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 $f)
+            echo "  $(basename $f): ${dur}秒"
+          done
+
+      - name: Generate TTS + SRT
+        run: |
+          python3 << 'TTSEOF'
+          import asyncio, edge_tts, os, subprocess
+
+          chunks = [
+              "OpenAIが放った最強のコーディングAI、GPT-5-Codexを知っていますか？",
+              "テック業界最大手メディアが一斉に報道。世界中の開発者が震えた。",
+              "AIコーディングの新時代が始まりました。",
+              "The Vergeも緊急速報。2026年9月最大のリリースと断言しています。",
+              "開発者たちは実際に何時間も試し続けています。",
+              "Codex CLIはGitHubで数万スター獲得。コードを書いてテストしてデプロイまで全自動。",
+              "完全オープンソースで誰でも今すぐ無料で使えます。コメントに codex と書いてプレゼントGET！",
+              "概要欄のリンクからGitHubをチェック。フォローして最新AI情報をいち早くキャッチ！",
+          ]
+
+          async def gen():
+              os.makedirs("/tmp/tts", exist_ok=True)
+              for i, text in enumerate(chunks):
+                  c = edge_tts.Communicate(text, "ja-JP-KeitaNeural", rate="+15%")
+                  await c.save(f"/tmp/tts/chunk_{i:02d}.mp3")
+                  print(f"✅ TTS {i}: {text[:30]}")
+
+          asyncio.run(gen())
+
+          durations = []
+          for i in range(len(chunks)):
+              r = subprocess.run(["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+                  "-of", "csv=p=0", f"/tmp/tts/chunk_{i:02d}.mp3"], capture_output=True, text=True)
+              dur = float(r.stdout.strip())
+              durations.append(dur)
+              print(f"  chunk_{i:02d}: {dur:.2f}秒")
+
+          def sec_to_srt(s):
+              h=int(s//3600); m=int((s%3600)//60); sec=s%60; ms=int((sec%1)*1000)
+              return f"{h:02d}:{m:02d}:{int(sec):02d},{ms:03d}"
+
+          srt = ""
+          t = 0.0
+          for i, (text, dur) in enumerate(zip(chunks, durations)):
+              srt += f"{i+1}\n{sec_to_srt(t)} --> {sec_to_srt(t+dur)}\n{text}\n\n"
+              t += dur
+
+          with open("/tmp/narration.srt", "w", encoding="utf-8") as f:
+              f.write(srt)
+          print(f"✅ SRT生成完了 合計{t:.1f}秒")
+
+          with open("/tmp/tts/concat.txt", "w") as f:
+              for i in range(len(chunks)):
+                  f.write(f"file '/tmp/tts/chunk_{i:02d}.mp3'\n")
+          subprocess.run(["ffmpeg", "-f", "concat", "-safe", "0", "-i", "/tmp/tts/concat.txt",
+              "-ar", "44100", "-ac", "2", "/tmp/narration.mp3", "-y"], capture_output=True)
+          print("✅ ナレーション結合完了")
+          TTSEOF
+
+      - name: SRT to ASS
+        run: |
+          python3 scripts/gen_subtitle_filter.py /tmp/narration.srt /tmp/narration.ass
+          echo "✅ ASS生成完了"
+
+      - name: Concat with xfade transitions
+        run: |
+          mkdir -p /tmp/final
+
+          # op_hf→techcrunch: WIPE LEFT
+          ffmpeg -i /tmp/clips/op_hf.mp4 -i /tmp/clips/techcrunch.mp4 \
+            -filter_complex "[0:v][1:v]xfade=transition=wipeleft:duration=0.4:offset=4.6[v]" \
+            -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/t1.mp4 -y 2>/dev/null && echo "✅ t1 WIPELEFT"
+
+          # t1→ai_auto: SLIDE LEFT
+          T=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/t1.mp4)
+          OFS=$(echo "$T - 0.4" | bc)
+          ffmpeg -i /tmp/final/t1.mp4 -i /tmp/clips/ai_auto.mp4 \
+            -filter_complex "[0:v][1:v]xfade=transition=slideleft:duration=0.4:offset=${OFS}[v]" \
+            -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/t2.mp4 -y 2>/dev/null && echo "✅ t2 SLIDELEFT"
+
+          # t2→verge: PUSH UP
+          T=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/t2.mp4)
+          OFS=$(echo "$T - 0.4" | bc)
+          ffmpeg -i /tmp/final/t2.mp4 -i /tmp/clips/verge.mp4 \
+            -filter_complex "[0:v][1:v]xfade=transition=slideup:duration=0.4:offset=${OFS}[v]" \
+            -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/t3.mp4 -y 2>/dev/null && echo "✅ t3 SLIDEUP"
+
+          # t3→typing: DIAGONAL WIPE
+          T=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/t3.mp4)
+          OFS=$(echo "$T - 0.4" | bc)
+          ffmpeg -i /tmp/final/t3.mp4 -i /tmp/clips/typing.mp4 \
+            -filter_complex "[0:v][1:v]xfade=transition=diagtl:duration=0.4:offset=${OFS}[v]" \
+            -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/t4.mp4 -y 2>/dev/null && echo "✅ t4 DIAGONAL"
+
+          # t4→codex_top: CIRCLE OPEN
+          T=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/t4.mp4)
+          OFS=$(echo "$T - 0.4" | bc)
+          ffmpeg -i /tmp/final/t4.mp4 -i /tmp/clips/codex_top.mp4 \
+            -filter_complex "[0:v][1:v]xfade=transition=circleopen:duration=0.4:offset=${OFS}[v]" \
+            -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/t5.mp4 -y 2>/dev/null && echo "✅ t5 CIRCLEOPEN"
+
+          # t5→codex_readme: WIPE RIGHT
+          T=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/t5.mp4)
+          OFS=$(echo "$T - 0.4" | bc)
+          ffmpeg -i /tmp/final/t5.mp4 -i /tmp/clips/codex_readme.mp4 \
+            -filter_complex "[0:v][1:v]xfade=transition=wiperight:duration=0.4:offset=${OFS}[v]" \
+            -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p /tmp/final/t6.mp4 -y 2>/dev/null && echo "✅ t6 WIPERIGHT"
+
+          # t6→ed_hf: DISSOLVE
+          T=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/t6.mp4)
+          OFS=$(echo "$T - 0.4" | bc)
+          ffmpeg -i /tmp/final/t6.mp4 -i /tmp/clips/ed_hf.mp4 \
+            -filter_complex "[0:v][1:v]xfade=transition=dissolve:duration=0.4:offset=${OFS}[v]" \
+            -map "[v]" -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p \
+            /tmp/final/video_no_audio.mp4 -y 2>/dev/null && echo "✅ 全シーン結合完了"
+
+          VIDEO_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/video_no_audio.mp4)
+          echo "✅ 動画長: ${VIDEO_DUR}秒"
+          ls -lh /tmp/final/video_no_audio.mp4
+
+      - name: Add narration + BGM + ASS subtitles
+        run: |
+          VIDEO_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/video_no_audio.mp4)
+          FADE_START=$(echo "$VIDEO_DUR - 3" | bc)
+
+          ffmpeg -stream_loop -1 -i assets/bgm/before_the_gates.mp3 \
+            -t $VIDEO_DUR \
+            -af "afade=t=in:st=0:d=2,afade=t=out:st=${FADE_START}:d=3,volume=0.18" \
+            -ar 44100 -ac 2 /tmp/bgm.mp3 -y 2>/dev/null && echo "✅ BGM完了"
+
+          ffmpeg -i /tmp/final/video_no_audio.mp4 \
+            -i /tmp/narration.mp3 \
+            -i /tmp/bgm.mp3 \
+            -filter_complex "[1:a]volume=2.0,aresample=44100[narr];[2:a]aresample=44100[bgm];[narr][bgm]amix=inputs=2:duration=first:weights=3 1[aout]" \
+            -map 0:v -map "[aout]" \
+            -c:v copy -c:a aac -b:a 192k -ar 44100 -ac 2 \
+            -t $VIDEO_DUR \
+            /tmp/final/video_with_audio.mp4 -y 2>/dev/null && echo "✅ 音声ミックス完了"
+
+          ffmpeg -y \
+            -i /tmp/final/video_with_audio.mp4 \
+            -vf "ass=/tmp/narration.ass" \
+            -c:v libx264 -crf 18 -preset fast -pix_fmt yuv420p \
+            -c:a copy \
+            /tmp/final/codex_launch_v5.mp4 2>/dev/null && echo "✅ ASS字幕完了"
+
+          ls -lh /tmp/final/codex_launch_v5.mp4
+          ffprobe -v quiet -show_entries format=duration,bit_rate -of csv=p=0 /tmp/final/codex_launch_v5.mp4
+          ffprobe -v quiet -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 /tmp/final/codex_launch_v5.mp4
+
+      - name: Upload final video
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-launch-v5
+          path: /tmp/final/codex_launch_v5.mp4
+          retention-days: 3

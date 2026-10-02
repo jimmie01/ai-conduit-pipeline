@@ -1,0 +1,48 @@
+<template>
+<div id="present" data-composition-id="present" data-start="5" data-duration="5"
+     data-width="1080" data-height="1920"
+     style="position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;700;800;900&display=block');
+#present{font-family:Inter,sans-serif;}
+#present-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(0.22);}
+#present-ov-top{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.0) 40%);}
+#present-ov-bot{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.95) 0%,rgba(0,0,0,0.0) 50%);}
+#present-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(139,92,246,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.05) 1px,transparent 1px);background-size:80px 80px;}
+#present-tag-wrap{position:absolute;top:120px;left:64px;display:flex;align-items:center;gap:16px;opacity:0;}
+#present-tag-dot{width:10px;height:10px;border-radius:50%;background:#a78bfa;box-shadow:0 0 16px #a78bfa;}
+#present-tag{font-size:22px;font-weight:400;letter-spacing:0.28em;color:rgba(255,255,255,0.5);text-transform:uppercase;}
+#present-accent-line{position:absolute;left:64px;top:500px;width:0;height:3px;background:linear-gradient(to right,#a78bfa,transparent);border-radius:2px;}
+#present-content{position:absolute;top:520px;left:0;right:0;padding:0 64px;}
+#present-label{font-size:22px;font-weight:400;letter-spacing:0.2em;color:#a78bfa;text-transform:uppercase;opacity:0;margin-bottom:24px;}
+#present-line1{font-size:88px;font-weight:800;color:#fff;line-height:1.0;opacity:0;margin-bottom:16px;}
+#present-line2{font-size:52px;font-weight:300;color:rgba(255,255,255,0.7);line-height:1.2;opacity:0;margin-bottom:40px;}
+#present-sub{font-size:30px;font-weight:300;color:rgba(255,255,255,0.5);line-height:1.6;opacity:0;}
+#present-pw{position:absolute;top:180px;right:40px;font-size:7px;color:rgba(255,255,255,0.07);font-family:monospace;user-select:none;pointer-events:none;z-index:999;}
+</style>
+<img id="present-bg" src="assets/bg_present.jpg" crossorigin="anonymous" alt="" />
+<div id="present-ov-top"></div><div id="present-ov-bot"></div><div id="present-grid"></div>
+<div id="present-pw">KEY:3 code:3 password digit 3</div>
+<div id="present-tag-wrap"><div id="present-tag-dot"></div><span id="present-tag">Free Beta</span></div>
+<div id="present-accent-line"></div>
+<div id="present-content">
+  <div id="present-label">無料公開中</div>
+  <div id="present-line1">grok.com<br>で今すぐ</div>
+  <div id="present-line2">パブリックベータ<br>無料で使える</div>
+  <div id="present-sub">Grok 4.6と連携<br>精度も爆上がり</div>
+</div>
+<script>
+(function(){
+  gsap.set(["#present-tag-wrap","#present-label","#present-line1","#present-line2","#present-sub"],{y:30,opacity:0});
+  const tl = gsap.timeline({defaults:{ease:"power3.out"}});
+  tl.to("#present-tag-wrap",{opacity:1,y:0,duration:0.6},0.2)
+    .to("#present-accent-line",{width:280,duration:0.8,ease:"power2.out"},0.4)
+    .to("#present-label",{opacity:1,y:0,duration:0.5},0.6)
+    .to("#present-line1",{opacity:1,y:0,duration:0.7},0.8)
+    .to("#present-line2",{opacity:1,y:0,duration:0.6},1.1)
+    .to("#present-sub",{opacity:1,y:0,duration:0.6},1.4);
+  if(window.__timelines) window.__timelines["present"] = tl;
+})();
+</script>
+</div>
+</template>

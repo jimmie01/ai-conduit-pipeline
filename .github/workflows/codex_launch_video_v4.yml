@@ -1,0 +1,204 @@
+name: Codex Launch Video v4
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright edge-tts -q
+          python3 -m playwright install chromium
+          echo "✅ 完了"
+
+      - name: Record screen scenes
+        run: |
+          python3 << 'RECEOF'
+          import asyncio, os, subprocess, json
+          from playwright.async_api import async_playwright
+
+          scenes = [
+              {"url": "https://techcrunch.com/category/artificial-intelligence/", "duration": 7, "scroll_from": 0, "scroll_to": 400, "id": "techcrunch"},
+              {"url": "https://www.theverge.com/ai-artificial-intelligence", "duration": 7, "scroll_from": 0, "scroll_to": 600, "id": "verge"},
+              {"url": "https://github.com/openai/codex", "duration": 8, "scroll_from": 0, "scroll_to": 0, "id": "codex_top"},
+              {"url": "https://github.com/openai/codex", "duration": 7, "scroll_from": 0, "scroll_to": 800, "id": "codex_readme"},
+          ]
+
+          async def record(scene):
+              out_dir = f"/tmp/scenes/{scene['id']}"
+              os.makedirs(out_dir, exist_ok=True)
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+                  page = await browser.new_page(
+                      viewport={"width": 540, "height": 960},
+                      user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"
+                  )
+                  for attempt in range(3):
+                      try:
+                          await page.goto(scene["url"], wait_until="domcontentloaded", timeout=60000)
+                          break
+                      except:
+                          await asyncio.sleep(3)
+                  await page.wait_for_timeout(2000)
+                  fps, frames = 30, scene["duration"] * 30
+                  for i in range(frames):
+                      if scene["scroll_to"] > scene["scroll_from"]:
+                          scroll = int(scene["scroll_from"] + (scene["scroll_to"] - scene["scroll_from"]) * i / frames)
+                      else:
+                          scroll = scene["scroll_from"]
+                      await page.evaluate(f"window.scrollTo(0, {scroll})")
+                      await page.screenshot(path=f"{out_dir}/frame_{i:04d}.png")
+                      await page.wait_for_timeout(33)
+                  await browser.close()
+              subprocess.run(["ffmpeg", "-r", "30", "-i", f"{out_dir}/frame_%04d.png",
+                  "-vf", "scale=1080:1920:flags=lanczos",
+                  "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
+                  f"{out_dir}/video.mp4", "-y"], capture_output=True)
+              print(f"✅ {scene['id']} 録画完了")
+
+          async def main():
+              for scene in scenes:
+                  await record(scene)
+
+          asyncio.run(main())
+          RECEOF
+          ls -lh /tmp/scenes/*/video.mp4
+
+      - name: Generate TTS + SRT
+        run: |
+          python3 << 'TTSEOF'
+          import asyncio, edge_tts, os, subprocess
+
+          chunks = [
+              "OpenAIが放った最強のコーディングAI、GPT-5-Codexを知っていますか？",
+              "2026年9月15日、OpenAIが突如リリース。世界中の開発者が震えた。",
+              "テック業界最大手メディアも一斉に報道。AIコーディングの新時代が始まった。",
+              "Codex CLIはターミナルで動くAIエージェントです。",
+              "コードを書いて、テストして、デプロイまで全自動でこなします。",
+              "GitHubでは数万スターを獲得。完全オープンソースで誰でも今すぐ無料で使えます。",
+              "Claude CodeやGemini CLIを超えたという開発者の声が続出しています。",
+              "コメントに codex と書いてくれた人に完全攻略テンプレートをプレゼント！",
+              "概要欄のリンクからGitHubをチェック。フォローして最新AI情報をいち早くキャッチしてください！",
+          ]
+
+          async def gen():
+              os.makedirs("/tmp/tts", exist_ok=True)
+              for i, text in enumerate(chunks):
+                  c = edge_tts.Communicate(text, "ja-JP-KeitaNeural", rate="+15%")
+                  await c.save(f"/tmp/tts/chunk_{i:02d}.mp3")
+                  print(f"✅ TTS {i}: {text[:25]}")
+
+          asyncio.run(gen())
+
+          import subprocess
+          durations = []
+          for i in range(len(chunks)):
+              r = subprocess.run(["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+                  "-of", "csv=p=0", f"/tmp/tts/chunk_{i:02d}.mp3"], capture_output=True, text=True)
+              dur = float(r.stdout.strip())
+              durations.append(dur)
+
+          def sec_to_srt(s):
+              h=int(s//3600); m=int((s%3600)//60); sec=s%60; ms=int((sec%1)*1000)
+              return f"{h:02d}:{m:02d}:{int(sec):02d},{ms:03d}"
+
+          srt = ""
+          t = 0.0
+          for i, (text, dur) in enumerate(zip(chunks, durations)):
+              srt += f"{i+1}\n{sec_to_srt(t)} --> {sec_to_srt(t+dur)}\n{text}\n\n"
+              t += dur
+
+          with open("/tmp/narration.srt", "w") as f:
+              f.write(srt)
+          print(f"✅ SRT生成完了 合計{t:.1f}秒")
+
+          with open("/tmp/tts/concat.txt", "w") as f:
+              for i in range(len(chunks)):
+                  f.write(f"file '/tmp/tts/chunk_{i:02d}.mp3'\n")
+          subprocess.run(["ffmpeg", "-f", "concat", "-safe", "0",
+              "-i", "/tmp/tts/concat.txt", "-ar", "44100", "-ac", "2",
+              "/tmp/narration.mp3", "-y"], capture_output=True)
+          print("✅ ナレーション結合完了")
+          TTSEOF
+
+      - name: SRT to ASS
+        run: |
+          python3 scripts/gen_subtitle_filter.py /tmp/narration.srt /tmp/narration.ass
+          echo "✅ ASS生成完了"
+
+      - name: Prepare and convert stock footage
+        run: |
+          mkdir -p /tmp/clips
+
+          # HF素材（そのまま使用）
+          cp assets/hf/gpt6_astra.mp4 /tmp/clips/hf_gpt6.mp4
+          cp assets/hf/codex_chatgpt.mp4 /tmp/clips/hf_codex.mp4
+          echo "✅ HF素材コピー完了"
+          ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/clips/hf_gpt6.mp4
+          ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/clips/hf_codex.mp4
+
+          # AI automation stock (縦型・5秒にトリム)
+          ffmpeg -i assets/stock/ai_automation.mp4 -t 8             -vf "vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/clips/ai_auto.mp4 -y 2>/dev/null && echo "✅ ai_automation準備完了"
+
+          # pet-typing stock (縦型に変換・5秒)
+          ffmpeg -i assets/stock/pet_typing.mp4             -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,vignette=PI/4"             -t 5 -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/clips/typing.mp4 -y 2>/dev/null && echo "✅ pet_typing準備完了"
+
+          # 画面録画にエフェクト適用
+          # TechCrunch: VIGNETTE + FADE IN
+          ffmpeg -i /tmp/scenes/techcrunch/video.mp4             -vf "fade=t=in:st=0:d=0.5,vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/clips/techcrunch.mp4 -y 2>/dev/null && echo "✅ techcrunch"
+
+          # The Verge: VIGNETTE
+          ffmpeg -i /tmp/scenes/verge/video.mp4             -vf "vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/clips/verge.mp4 -y 2>/dev/null && echo "✅ verge"
+
+          # GitHub Codex top: HIGHLIGHT BOX
+          ffmpeg -i /tmp/scenes/codex_top/video.mp4             -vf "drawbox=x=20:y=100:w=1040:h=700:color=yellow@0.35:t=5,vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/clips/codex_top.mp4 -y 2>/dev/null && echo "✅ codex_top"
+
+          # GitHub README: VIGNETTE
+          ffmpeg -i /tmp/scenes/codex_readme/video.mp4             -vf "vignette=PI/4"             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/clips/codex_readme.mp4 -y 2>/dev/null && echo "✅ codex_readme"
+
+          ls -lh /tmp/clips/
+
+      - name: Concat all clips with transitions
+        run: |
+          mkdir -p /tmp/final
+
+          # 全クリップをシンプルconcatで結合
+          # 順序: HF_GPT6 → TechCrunch → AI_Auto → Verge → Typing → Codex_Top → Codex_README → HF_Codex
+          printf "file '/tmp/clips/hf_gpt6.mp4'\nfile '/tmp/clips/techcrunch.mp4'\nfile '/tmp/clips/ai_auto.mp4'\nfile '/tmp/clips/verge.mp4'\nfile '/tmp/clips/typing.mp4'\nfile '/tmp/clips/codex_top.mp4'\nfile '/tmp/clips/codex_readme.mp4'\nfile '/tmp/clips/hf_codex.mp4'\n" > /tmp/concat.txt
+
+          ffmpeg -f concat -safe 0 -i /tmp/concat.txt             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p             /tmp/final/video_no_audio.mp4 -y 2>/dev/null && echo "✅ concat完了"
+
+          VIDEO_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/video_no_audio.mp4)
+          echo "動画長: ${VIDEO_DUR}秒"
+          ls -lh /tmp/final/video_no_audio.mp4
+
+      - name: Add narration + BGM + ASS subtitles
+        run: |
+          VIDEO_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/final/video_no_audio.mp4)
+          FADE_START=$(echo "$VIDEO_DUR - 3" | bc)
+
+          # BGM Before_the_Gates
+          ffmpeg -stream_loop -1 -i assets/bgm/before_the_gates.mp3             -t $VIDEO_DUR             -af "afade=t=in:st=0:d=2,afade=t=out:st=${FADE_START}:d=3,volume=0.18"             -ar 44100 -ac 2 /tmp/bgm.mp3 -y 2>/dev/null && echo "✅ BGM完了"
+
+          # ナレーション + BGM ミックス
+          ffmpeg -i /tmp/final/video_no_audio.mp4             -i /tmp/narration.mp3             -i /tmp/bgm.mp3             -filter_complex "[1:a]volume=2.0,aresample=44100[narr];[2:a]aresample=44100[bgm];[narr][bgm]amix=inputs=2:duration=first:weights=3 1[aout]"             -map 0:v -map "[aout]"             -c:v copy -c:a aac -b:a 192k -ar 44100 -ac 2             -t $VIDEO_DUR             /tmp/final/video_with_audio.mp4 -y 2>/dev/null && echo "✅ 音声ミックス完了"
+
+          # ASS字幕焼き込み
+          ffmpeg -y             -i /tmp/final/video_with_audio.mp4             -vf "ass=/tmp/narration.ass"             -c:v libx264 -crf 18 -preset fast -pix_fmt yuv420p             -c:a copy             /tmp/final/codex_launch_v4.mp4 2>/dev/null && echo "✅ ASS字幕完了"
+
+          ls -lh /tmp/final/codex_launch_v4.mp4
+          ffprobe -v quiet -show_entries format=duration,bit_rate -of csv=p=0 /tmp/final/codex_launch_v4.mp4
+          ffprobe -v quiet -show_entries stream=codec_name,sample_rate,channels -of csv=p=0 /tmp/final/codex_launch_v4.mp4
+
+      - name: Upload final video
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-launch-v4
+          path: /tmp/final/codex_launch_v4.mp4
+          retention-days: 3

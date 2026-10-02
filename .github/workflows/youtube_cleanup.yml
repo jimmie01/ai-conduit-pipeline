@@ -1,0 +1,78 @@
+name: YouTube Cleanup
+on:
+  workflow_dispatch:
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Delete all videos except figma-launch
+        env:
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+        shell: python3 {0}
+        run: |
+          import os, requests, time
+
+          KEEP_VIDEO_ID = "-m8hTZQUPkY"
+
+          r = requests.post("https://oauth2.googleapis.com/token", data={
+              "grant_type": "refresh_token",
+              "refresh_token": os.environ["YOUTUBE_REFRESH_TOKEN"],
+              "client_id": os.environ["YOUTUBE_CLIENT_ID"],
+              "client_secret": os.environ["YOUTUBE_CLIENT_SECRET"],
+          })
+          token = r.json().get("access_token", "")
+          headers = {"Authorization": f"Bearer {token}"}
+
+          # チャンネル情報確認
+          r0 = requests.get("https://www.googleapis.com/youtube/v3/channels",
+              params={"part": "contentDetails,snippet", "mine": "true"}, headers=headers)
+          print(f"チャンネルレスポンス: {r0.status_code}")
+          data0 = r0.json()
+          if "items" not in data0 or len(data0["items"]) == 0:
+              print(f"チャンネル取得失敗: {data0}")
+              exit(1)
+          channel = data0["items"][0]
+          print(f"チャンネル名: {channel['snippet']['title']}")
+          uploads_id = channel["contentDetails"]["relatedPlaylists"]["uploads"]
+          print(f"uploadsID: {uploads_id}")
+
+          # uploadsプレイリストから全動画取得
+          all_videos = []
+          next_page = None
+          while True:
+              params = {"part": "snippet", "playlistId": uploads_id, "maxResults": 50}
+              if next_page:
+                  params["pageToken"] = next_page
+              r2 = requests.get("https://www.googleapis.com/youtube/v3/playlistItems",
+                  params=params, headers=headers)
+              print(f"playlistItems: {r2.status_code}")
+              data = r2.json()
+              items = data.get("items", [])
+              all_videos.extend(items)
+              print(f"  取得: {len(items)}本")
+              next_page = data.get("nextPageToken")
+              if not next_page:
+                  break
+
+          print(f"総動画数: {len(all_videos)}")
+          deleted = 0
+          for item in all_videos:
+              vid = item["snippet"]["resourceId"]["videoId"]
+              title = item["snippet"]["title"]
+              if vid == KEEP_VIDEO_ID:
+                  print(f"  KEEP: {vid}: {title}")
+                  continue
+              r3 = requests.delete(
+                  "https://www.googleapis.com/youtube/v3/videos",
+                  params={"id": vid}, headers=headers)
+              if r3.status_code == 204:
+                  print(f"  OK: {vid}: {title[:40]}")
+                  deleted += 1
+              else:
+                  print(f"  NG: {vid}: {r3.status_code} {r3.text[:100]}")
+              time.sleep(0.3)
+
+          print(f"削除完了: {deleted}本")

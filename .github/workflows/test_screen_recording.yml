@@ -1,0 +1,125 @@
+name: Test Screen Recording Methods
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "録画対象URL"
+        required: false
+        default: "https://github.com/webadderallorg/Recordly"
+
+jobs:
+  test-all-methods:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg xvfb chromium-browser fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright -q
+          python3 -m playwright install chromium
+          echo "✅ 依存関係インストール完了"
+
+      - name: Method 1 - Playwright built-in video
+        env:
+          TARGET_URL: ${{ github.event.inputs.target_url }}
+        run: |
+          mkdir -p /tmp/method1
+          python3 scripts/screen_record_method1.py
+          WEBM=$(find /tmp/method1 -name "*.webm" | head -1)
+          if [ -n "$WEBM" ]; then
+            ffmpeg -i "$WEBM" -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p /tmp/method1/output.mp4 -y 2>/dev/null
+            echo "✅ Method1完了: $(ls -lh /tmp/method1/output.mp4 | awk '{print $5}')"
+            ffprobe -v quiet -show_entries stream=width,height,duration -of csv=p=0 /tmp/method1/output.mp4
+          else
+            echo "❌ Method1: WebMファイルなし"
+          fi
+
+      - name: Method 2 - Xvfb + ffmpeg X11 capture
+        env:
+          TARGET_URL: ${{ github.event.inputs.target_url }}
+        run: |
+          mkdir -p /tmp/method2
+          Xvfb :99 -screen 0 1080x1920x24 &
+          XVFB_PID=$!
+          sleep 2
+          DISPLAY=:99 ffmpeg -f x11grab -r 30 -s 1080x1920 -i :99.0             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p             /tmp/method2/output.mp4 &
+          FFMPEG_PID=$!
+          sleep 1
+          DISPLAY=:99 chromium-browser --no-sandbox --disable-gpu             --window-size=1080,1920 --window-position=0,0             "$TARGET_URL" &
+          CHROME_PID=$!
+          sleep 10
+          kill $CHROME_PID 2>/dev/null || true
+          sleep 1
+          kill $FFMPEG_PID 2>/dev/null || true
+          kill $XVFB_PID 2>/dev/null || true
+          wait 2>/dev/null || true
+          ls -lh /tmp/method2/output.mp4 2>/dev/null &&             echo "✅ Method2完了" &&             ffprobe -v quiet -show_entries stream=width,height,duration -of csv=p=0 /tmp/method2/output.mp4 ||             echo "❌ Method2失敗"
+
+      - name: Method 3 - Screenshots slideshow
+        env:
+          TARGET_URL: ${{ github.event.inputs.target_url }}
+        run: |
+          mkdir -p /tmp/method3/frames
+          python3 scripts/screen_record_method3.py
+          ffmpeg -r 5 -i /tmp/method3/frames/frame_%04d.png             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p             -vf "scale=1080:1920"             /tmp/method3/output.mp4 -y 2>/dev/null
+          ls -lh /tmp/method3/output.mp4 2>/dev/null &&             echo "✅ Method3完了" &&             ffprobe -v quiet -show_entries stream=width,height,duration -of csv=p=0 /tmp/method3/output.mp4 ||             echo "❌ Method3失敗"
+
+      - name: Method 4 - Smooth scroll recording
+        env:
+          TARGET_URL: ${{ github.event.inputs.target_url }}
+        run: |
+          mkdir -p /tmp/method4/frames
+          python3 scripts/screen_record_method4.py
+          ffmpeg -r 15 -i /tmp/method4/frames/frame_%04d.png             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p             -vf "scale=1080:1920"             /tmp/method4/output.mp4 -y 2>/dev/null
+          ls -lh /tmp/method4/output.mp4 2>/dev/null &&             echo "✅ Method4完了" &&             ffprobe -v quiet -show_entries stream=width,height,duration -of csv=p=0 /tmp/method4/output.mp4 ||             echo "❌ Method4失敗"
+
+      - name: Method 5 - Xvfb + Playwright headed
+        env:
+          TARGET_URL: ${{ github.event.inputs.target_url }}
+        run: |
+          mkdir -p /tmp/method5
+          Xvfb :98 -screen 0 1080x1920x24 &
+          XVFB_PID=$!
+          sleep 2
+          DISPLAY=:98 ffmpeg -f x11grab -r 30 -s 1080x1920 -i :98.0             -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p             /tmp/method5/output.mp4 &
+          FFMPEG_PID=$!
+          sleep 1
+          DISPLAY=:98 python3 -c "
+          import asyncio, os
+          from playwright.async_api import async_playwright
+          async def run():
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=False, args=['--no-sandbox','--window-size=1080,1920','--window-position=0,0'])
+                  page = await browser.new_page(viewport={'width':1080,'height':1920})
+                  await page.goto(os.environ.get('TARGET_URL','https://github.com'), wait_until='networkidle', timeout=30000)
+                  await page.wait_for_timeout(3000)
+                  await page.evaluate('window.scrollTo(0, 500)')
+                  await page.wait_for_timeout(2000)
+                  await page.evaluate('window.scrollTo(0, 1000)')
+                  await page.wait_for_timeout(2000)
+                  await page.evaluate('window.scrollTo(0, 0)')
+                  await page.wait_for_timeout(2000)
+                  await browser.close()
+          asyncio.run(run())
+          "
+          sleep 1
+          kill $FFMPEG_PID 2>/dev/null || true
+          kill $XVFB_PID 2>/dev/null || true
+          wait 2>/dev/null || true
+          ls -lh /tmp/method5/output.mp4 2>/dev/null &&             echo "✅ Method5完了" &&             ffprobe -v quiet -show_entries stream=width,height,duration -of csv=p=0 /tmp/method5/output.mp4 ||             echo "❌ Method5失敗"
+
+      - name: Upload all results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screen-recording-results
+          path: |
+            /tmp/method1/output.mp4
+            /tmp/method2/output.mp4
+            /tmp/method3/output.mp4
+            /tmp/method4/output.mp4
+            /tmp/method5/output.mp4
+          retention-days: 3
