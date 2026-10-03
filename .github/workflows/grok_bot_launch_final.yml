@@ -42,7 +42,7 @@ jobs:
 
           scenes = [
               {"url": "https://x.com/grok", "duration": 7, "scroll_from": 0, "scroll_to": 400, "id": "x_twitter"},
-              {"url": "https://techcrunch.com/2026/08/11/xai-launches-grok-bot-beta/", "duration": 7, "scroll_from": 0, "scroll_to": 600, "id": "x_twitter"},
+              {"url": "https://techcrunch.com/2026/08/11/xai-launches-grok-bot-beta/", "duration": 7, "scroll_from": 0, "scroll_to": 600, "id": "techcrunch"},
               {"url": "https://grok.com", "duration": 8, "scroll_from": 0, "scroll_to": 0, "id": "grok_top"},
               {"url": "https://grok.com", "duration": 7, "scroll_from": 0, "scroll_to": 800, "id": "xai_top"},
           ]
