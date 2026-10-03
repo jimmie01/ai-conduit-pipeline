@@ -84,14 +84,32 @@ jobs:
       - name: Step3 - Prepare Broll footage
         run: |
           # ai_automation (縦型・5秒・30fps統一)
-          ffmpeg -i assets/stock/ai_automation.mp4 -t 5 -r 30 \
-            -vf "vignette=PI/4" \
+          python3 -c "
+import urllib.request, json
+headers = {'Authorization': '${{ secrets.PEXELS_API_KEY }}'}
+req = urllib.request.Request('https://api.pexels.com/videos/search?query=artificial+intelligence&orientation=portrait&per_page=1', headers=headers)
+data = json.load(urllib.request.urlopen(req))
+url = data['videos'][0]['video_files'][0]['link']
+urllib.request.urlretrieve(url, '/tmp/broll_ai_raw.mp4')
+print('downloaded')
+"
+          ffmpeg -i /tmp/broll_ai_raw.mp4 -t 5 -r 30 \
+            -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,vignette=PI/4" \
             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p \
             /tmp/clips/broll_ai.mp4 -y 2>/dev/null && echo "✅ Bロール1 ai_automation 5秒"
 
           # freelance_laptop (1080x2048→1080x1920crop・5秒・30fps統一)
-          ffmpeg -i assets/stock/freelance_laptop.mp4 -t 5 -r 30 \
-            -vf "crop=1080:1920:0:64,vignette=PI/4" \
+          python3 -c "
+import urllib.request, json
+headers = {'Authorization': '${{ secrets.PEXELS_API_KEY }}'}
+req = urllib.request.Request('https://api.pexels.com/videos/search?query=laptop+working&orientation=portrait&per_page=1', headers=headers)
+data = json.load(urllib.request.urlopen(req))
+url = data['videos'][0]['video_files'][0]['link']
+urllib.request.urlretrieve(url, '/tmp/broll_laptop_raw.mp4')
+print('downloaded')
+"
+          ffmpeg -i /tmp/broll_laptop_raw.mp4 -t 5 -r 30 \
+            -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,vignette=PI/4" \
             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p \
             /tmp/clips/broll_laptop.mp4 -y 2>/dev/null && echo "✅ Bロール2 freelance_laptop 5秒"
 
