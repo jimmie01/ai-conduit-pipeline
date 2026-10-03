@@ -84,30 +84,16 @@ jobs:
       - name: Step3 - Prepare Broll footage
         run: |
           # ai_automation (縦型・5秒・30fps統一)
-          python3 -c "
-import urllib.request, json
-headers = {'Authorization': '${{ secrets.PEXELS_API_KEY }}'}
-req = urllib.request.Request('https://api.pexels.com/videos/search?query=artificial+intelligence&orientation=portrait&per_page=1', headers=headers)
-data = json.load(urllib.request.urlopen(req))
-url = data['videos'][0]['video_files'][0]['link']
-urllib.request.urlretrieve(url, '/tmp/broll_ai_raw.mp4')
-print('downloaded')
-"
+          VIDEO_URL=$(curl -s -H "Authorization: ${{ secrets.PEXELS_API_KEY }}" "https://api.pexels.com/videos/search?query=artificial+intelligence&orientation=portrait&per_page=1" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['videos'][0]['video_files'][0]['link'])")
+          curl -sL "$VIDEO_URL" -o /tmp/broll_ai_raw.mp4
           ffmpeg -i /tmp/broll_ai_raw.mp4 -t 5 -r 30 \
             -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,vignette=PI/4" \
             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p \
             /tmp/clips/broll_ai.mp4 -y 2>/dev/null && echo "✅ Bロール1 ai_automation 5秒"
 
           # freelance_laptop (1080x2048→1080x1920crop・5秒・30fps統一)
-          python3 -c "
-import urllib.request, json
-headers = {'Authorization': '${{ secrets.PEXELS_API_KEY }}'}
-req = urllib.request.Request('https://api.pexels.com/videos/search?query=laptop+working&orientation=portrait&per_page=1', headers=headers)
-data = json.load(urllib.request.urlopen(req))
-url = data['videos'][0]['video_files'][0]['link']
-urllib.request.urlretrieve(url, '/tmp/broll_laptop_raw.mp4')
-print('downloaded')
-"
+          VIDEO_URL2=$(curl -s -H "Authorization: ${{ secrets.PEXELS_API_KEY }}" "https://api.pexels.com/videos/search?query=laptop+working&orientation=portrait&per_page=1" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['videos'][0]['video_files'][0]['link'])")
+          curl -sL "$VIDEO_URL2" -o /tmp/broll_laptop_raw.mp4
           ffmpeg -i /tmp/broll_laptop_raw.mp4 -t 5 -r 30 \
             -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,vignette=PI/4" \
             -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p \
