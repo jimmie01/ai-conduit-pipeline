@@ -13,7 +13,6 @@ remotion-composer/public/programming_*.mp4
 remotion-composer/public/career_*.mp4
 *.mp4
 *.aiff
-*.mp3
 .env
 __pycache__/
 *.pyc
@@ -25,4 +24,3 @@ variables_test_a/
 variables_test_b/
 *.mp4
 *.wav
-*.mp3
