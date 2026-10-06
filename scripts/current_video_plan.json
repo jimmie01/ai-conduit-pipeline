@@ -1,0 +1,62 @@
+{
+  "title": "AIがHTML1枚で難問解決！『answer-me-with-html』",
+  "color_palette": {
+    "primary": "#1E90FF",
+    "accent": "#FF6F61",
+    "bg": "#F5F5F5"
+  },
+  "overall_mood": "エネルギッシュ・ミニマル",
+  "scenes": [
+    {
+      "id": "hook",
+      "seconds": 3,
+      "camera": "クローズアップ",
+      "text_main": "HTMLで答えられない質問、ありませんか？",
+      "text_sub": "",
+      "visual": "frustrated programmer desk",
+      "animation": "フェードイン",
+      "effect": "ビネット"
+    },
+    {
+      "id": "agitate",
+      "seconds": 4,
+      "camera": "スローズームイン",
+      "text_main": "複雑な質問に何時間も検索…",
+      "text_sub": "情報が散らばって時間が無駄に",
+      "visual": "messy desk with papers and laptop",
+      "animation": "スライドアップ",
+      "effect": "グリッチ"
+    },
+    {
+      "id": "present",
+      "seconds": 6,
+      "camera": "ダイナミックパーン",
+      "text_main": "AIがHTML1枚で即答！",
+      "text_sub": "『answer-me-with-html』で30秒解決",
+      "visual": "code editor AI generating HTML",
+      "animation": "ズームイン",
+      "effect": "グロー"
+    },
+    {
+      "id": "demo",
+      "seconds": 5,
+      "camera": "オーバーザショルダー",
+      "text_main": "実際にコードが生成される様子",
+      "text_sub": "質問入力→HTMLが完成",
+      "visual": "screen capture of AI tool generating HTML",
+      "animation": "フェードイン→スライド左",
+      "effect": "なし"
+    },
+    {
+      "id": "cta",
+      "seconds": 2,
+      "camera": "固定ショット",
+      "text_main": "今すぐ試す！",
+      "text_sub": "コメントで質問をシェア",
+      "visual": "hand tapping phone screen",
+      "animation": "ポップイン",
+      "effect": "ビネット"
+    }
+  ],
+  "tts_script": "HTMLで答えられない質問、ずっと悩んでいませんか？検索に時間をかけても結局見つからない…そんなときは『answer-me-with-html』が救世主です。AIがあなたの質問を解析し、たった30秒で完璧なHTMLページを生成。画面にコードが瞬時に現れる様子をご覧ください。さあ、今すぐ試してみましょう！コメントであなたの質問をシェアしてください。"
+}
