@@ -43,11 +43,6 @@ jobs:
           git diff --staged --quiet || git commit -m "auto: 新動画コンテンツ自動生成 $(date '+%Y-%m-%d %H:%M')"
           git push origin master || true
 
-      - name: Clone sample
-        run: |
-          git lfs install
-          git clone --depth=1 https://github.com/heygen-com/hyperframes-launches.git hf_launches
-
       - name: Convert to vertical
         env:
           SAMPLE_NAME: ${{ steps.generate.outputs.sample_name }}
