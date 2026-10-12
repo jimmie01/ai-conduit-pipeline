@@ -53,7 +53,7 @@ jobs:
           if os.path.exists(f"hf_original/{name}"):
               src = f"hf_original/{name}"
           else:
-              src = f"hf_launches/{name}"
+              src = f"hf_original/{name}"
           idx_html = open(f"{src}/index.html").read()
           dw = re.search(r'data-width="(\d+)"', idx_html)
           dh = re.search(r'data-height="(\d+)"', idx_html)
@@ -88,7 +88,7 @@ jobs:
           if [ -d "hf_original/$SAMPLE_NAME" ]; then
             HF_VIDEO_COVERAGE_THRESHOLD=0 hyperframes render hf_original/$SAMPLE_NAME -o raw.mp4
           else
-            HF_VIDEO_COVERAGE_THRESHOLD=0 hyperframes render hf_launches/$SAMPLE_NAME -o raw.mp4
+            HF_VIDEO_COVERAGE_THRESHOLD=0 hyperframes render hf_original/$SAMPLE_NAME -o raw.mp4
           fi
           ls -lh raw.mp4
 
