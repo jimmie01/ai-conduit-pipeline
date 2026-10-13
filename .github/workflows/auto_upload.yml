@@ -96,6 +96,8 @@ jobs:
         env:
           SAMPLE_NAME: ${{ steps.generate.outputs.sample_name }}
         run: |
+          echo "SAMPLE_NAME=[$SAMPLE_NAME]"
+          python3 -c "import edge_tts; print('edge_tts OK')"
           python3 scripts/gen_caption_composition.py "$SAMPLE_NAME" narration.mp3 captions.html narration.srt
           echo "✅ TTS完了"
           ls -lh narration.mp3
