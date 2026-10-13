@@ -284,14 +284,12 @@ jobs:
           SLUG: ${{ github.event.inputs.slug }}
 
       - name: Generate TTS and caption
-        continue-on-error: true
         run: |
           SLUG="${{ github.event.inputs.slug }}"
           echo "Generating TTS for: $SLUG"
-          python3 -c "import edge_tts; print('✅ edge_tts version:', edge_tts.version.__version__)" 2>&1 || true
-          # TTS生成 (失敗しても続行)
-          timeout 120 python3 scripts/gen_caption_composition.py "$SLUG" "/tmp/${SLUG}.mp3" "/tmp/captions.html" "/tmp/${SLUG}.srt" 2>&1 || echo "⚠️ TTS generation failed or timed out"
-          ls -lh /tmp/*.mp3 /tmp/*.srt 2>/dev/null || echo "⚠️ No audio files generated"
+          python3 -c "import edge_tts; print('✅ edge_tts OK')"
+          python3 scripts/gen_caption_composition.py "$SLUG"
+          ls -lh /tmp/*.mp3 /tmp/*.srt 2>/dev/null || true
 
       - name: Compose final video
         run: |
@@ -334,26 +332,91 @@ jobs:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          SAMPLE_NAME: ${{ github.event.inputs.slug }}
         run: |
           SLUG="${{ github.event.inputs.slug }}"
-          TITLE=$(cat /tmp/video_title.txt 2>/dev/null || echo "Grok Bot ${SLUG} 解説")
-          DESCRIPTION=$(cat /tmp/video_description.txt 2>/dev/null || echo "Grok Bot活用ガイド")
           VIDEO_FILE="/tmp/output/${SLUG}_final.mp4"
-          SRT_FILE="/tmp/${SLUG}.srt"
 
-          echo "Uploading: $TITLE"
-
-          if [ -f "$VIDEO_FILE" ]; then
-            python3 scripts/youtube_upload.py \
-              "$VIDEO_FILE" \
-              "$TITLE" \
-              "$DESCRIPTION" \
-              "${SRT_FILE}" 2>&1 || echo "⚠️ Upload failed (check YouTube credentials)"
-            echo "✅ Upload complete: $TITLE"
-          else
-            echo "❌ Video file not found: $VIDEO_FILE"
+          if [ ! -f "$VIDEO_FILE" ]; then
+            echo "❌ Video not found: $VIDEO_FILE"
             exit 1
           fi
+
+          # output.mp4にコピー（youtube_upload.pyが参照するため）
+          cp "$VIDEO_FILE" output.mp4
+          echo "✅ output.mp4: $(ls -lh output.mp4 | awk '{print $5}')"
+
+          # タイトル取得
+          TITLE=$(cat /tmp/video_title.txt 2>/dev/null || echo "Grok Bot ${SLUG} 解説 #GrokBot #AI活用 #Shorts")
+          echo "Title: $TITLE"
+
+          # YouTube APIで直接アップロード
+          python3 << PYEOF
+import requests, os, sys
+
+slug = os.environ["SAMPLE_NAME"]
+title_file = "/tmp/video_title.txt"
+desc_file = "/tmp/video_description.txt"
+
+title = open(title_file).read().strip() if os.path.exists(title_file) else f"Grok Bot {slug} 解説 #GrokBot #AI活用 #Shorts"
+description = open(desc_file).read().strip() if os.path.exists(desc_file) else f"Grok Botの{slug}機能を解説。\n\n#GrokBot #xAI #AI活用 #自動化"
+description += "\n\n✅ x.ai/botで無料体験"
+
+# アクセストークン取得
+r = requests.post("https://oauth2.googleapis.com/token", data={
+    "grant_type": "refresh_token",
+    "refresh_token": os.environ["YOUTUBE_REFRESH_TOKEN"],
+    "client_id": os.environ["YOUTUBE_CLIENT_ID"],
+    "client_secret": os.environ["YOUTUBE_CLIENT_SECRET"],
+})
+token_data = r.json()
+token = token_data.get("access_token", "")
+if not token:
+    print(f"トークン取得失敗: {token_data}")
+    sys.exit(1)
+print(f"✅ token ok")
+
+# メタデータ
+metadata = {
+    "snippet": {
+        "title": title[:100],
+        "description": description[:5000],
+        "tags": ["GrokBot","xAI","AI活用","自動化","AIエージェント","生産性向上","Shorts"],
+        "categoryId": "28",
+        "defaultLanguage": "ja"
+    },
+    "status": {"privacyStatus": "public", "selfDeclaredMadeForKids": False}
+}
+
+headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+# resumable upload URLの取得
+r2 = requests.post(
+    "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+    headers=headers, json=metadata
+)
+upload_url = r2.headers.get("Location", "")
+if not upload_url:
+    print(f"❌ Upload URL取得失敗: {r2.status_code} {r2.text[:200]}")
+    sys.exit(1)
+print(f"✅ upload URL ok")
+
+# 動画データ送信
+with open("output.mp4", "rb") as f:
+    video_data = f.read()
+
+print(f"Video size: {len(video_data)//1024//1024}MB")
+
+r3 = requests.put(upload_url, data=video_data, headers={"Content-Type": "video/mp4"})
+result = r3.json()
+video_id = result.get("id", "")
+if video_id:
+    print(f"✅ YouTube投稿成功: https://youtube.com/shorts/{video_id}")
+    print(f"Title: {title}")
+else:
+    print(f"❌ 投稿失敗: {r3.status_code} {r3.text[:300]}")
+    sys.exit(1)
+PYEOF
 
       - name: Summary
         if: always()
