@@ -284,12 +284,14 @@ jobs:
           SLUG: ${{ github.event.inputs.slug }}
 
       - name: Generate TTS and caption
+        continue-on-error: true
         run: |
           SLUG="${{ github.event.inputs.slug }}"
           echo "Generating TTS for: $SLUG"
-          python3 -c "import edge_tts; print('✅ edge_tts OK')"
-          python3 scripts/gen_caption_composition.py "$SLUG"
-          ls -lh /tmp/*.mp3 /tmp/*.srt 2>/dev/null || true
+          python3 -c "import edge_tts; print('✅ edge_tts version:', edge_tts.version.__version__)" 2>&1 || true
+          # TTS生成 (失敗しても続行)
+          timeout 120 python3 scripts/gen_caption_composition.py "$SLUG" "/tmp/${SLUG}.mp3" "/tmp/captions.html" "/tmp/${SLUG}.srt" 2>&1 || echo "⚠️ TTS generation failed or timed out"
+          ls -lh /tmp/*.mp3 /tmp/*.srt 2>/dev/null || echo "⚠️ No audio files generated"
 
       - name: Compose final video
         run: |
