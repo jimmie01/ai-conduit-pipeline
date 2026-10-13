@@ -1,0 +1,338 @@
+[
+  {
+    "id": "grok-chief-of-staff",
+    "name": "Chief of Staff",
+    "category": "General",
+    "desc": "Slack・メール・カレンダー・議事録を確認し、新着情報と優先事項との関連を出典付きで報告する常駐アシスタント"
+  },
+  {
+    "id": "grok-sales-outbound",
+    "name": "Sales Outbound",
+    "category": "Sales",
+    "desc": "アカウントを夜間にリサーチし、見込み客をスコアリングして、メールやLinkedInの文面を作成し承認用リストを用意する"
+  },
+  {
+    "id": "grok-paid-media",
+    "name": "Paid Media",
+    "category": "Marketing",
+    "desc": "広告の実績データを取得し、月次予算に基づく配分変更を提案して、承認後に反映する"
+  },
+  {
+    "id": "grok-account-health",
+    "name": "Account Health",
+    "category": "Customer Success",
+    "desc": "顧客の利用状況やシグナルを分析し、リスクとアップセルの機会をウォッチリストにまとめる"
+  },
+  {
+    "id": "grok-talent-scout",
+    "name": "Talent Scout",
+    "category": "Recruiting",
+    "desc": "候補者の発掘から内定までを進め、ATS登録済みの人を除外し、承認後に日程調整も行う"
+  },
+  {
+    "id": "grok-expense-manager",
+    "name": "Expense Manager",
+    "category": "Finance",
+    "desc": "経費データから週次サマリーを作成し、メールの領収書を登録して、未分類の項目を担当者に催促する"
+  },
+  {
+    "id": "grok-bug-reproduction",
+    "name": "Bug Reproduction",
+    "category": "Engineering",
+    "desc": "報告スレッドを確認し、ステージング環境で同じ操作を再現して、手順・スクリーンショット・ネットワーク情報をまとめる"
+  },
+  {
+    "id": "grok-product-performance",
+    "name": "Product Performance",
+    "category": "Engineering",
+    "desc": "監視ツールにログインしてフレームグラフを確認し、ホットスポットと画像付きの報告書を作成する"
+  },
+  {
+    "id": "grok-account-manager",
+    "name": "Account Manager",
+    "category": "Customer Success",
+    "desc": "通話記録やCRM・Slackから商談準備を行い、フォローアップの下書きと次のアクションを更新する"
+  },
+  {
+    "id": "grok-account-research",
+    "name": "Account Research Specialist",
+    "category": "Sales",
+    "desc": "Salesforceと最新のシグナルから適合度と関心度を評価し、アカウントごとの共有用リサーチ資料を作る"
+  },
+  {
+    "id": "grok-apartment-scout",
+    "name": "Apartment Scout",
+    "category": "Life",
+    "desc": "新規物件を条件で絞り込み、内見の予約メールを送り、選んだ物件に応募する"
+  },
+  {
+    "id": "grok-beta-adoption",
+    "name": "Beta Adoption Watcher",
+    "category": "Product",
+    "desc": "新機能の利用状況を監視し、試用中の顧客を特定してフォローアップできるようにする"
+  },
+  {
+    "id": "grok-calendar-coordinator",
+    "name": "Calendar Coordinator",
+    "category": "Recruiting",
+    "desc": "複数のカレンダーをもとに日程を調整し、確定していない仮予定の確認を行う"
+  },
+  {
+    "id": "grok-call-faq-miner",
+    "name": "Call FAQ Miner",
+    "category": "Product",
+    "desc": "通話で出た質問を集計し、回答箇所を元の録画へのリンク付きで整理してイネーブルメントを更新する"
+  },
+  {
+    "id": "grok-cloud-orchestrator",
+    "name": "Cloud Agent Orchestrator",
+    "category": "Engineering",
+    "desc": "複数のクラウドエージェント実行を開始・監視し、停滞したものを対応して報告をまとめる"
+  },
+  {
+    "id": "grok-community-ops",
+    "name": "Community Operations Manager",
+    "category": "Marketing",
+    "desc": "アンバサダー応募を審査し、各チャネルのDMを整理して、定期的なナーチャリング文面を作成する"
+  },
+  {
+    "id": "grok-compelling-events",
+    "name": "Compelling Events Monitor",
+    "category": "Marketing",
+    "desc": "役員の投稿から受賞・ローンチ・採用のシグナルを探し、反応すべき投稿のダイジェストを作る"
+  },
+  {
+    "id": "grok-competitive-intel",
+    "name": "Competitive Intelligence Analyst",
+    "category": "Marketing",
+    "desc": "競合の新製品を夜間に監視し、クリエイティブの劣化や古い訴求を検出して、重要な変化と改善案だけを伝える"
+  },
+  {
+    "id": "grok-contract-desk",
+    "name": "Contract Desk",
+    "category": "Finance",
+    "desc": "契約書の進捗を段階と担当者別に整理し、主要条件を抽出して、滞っているレビューを知らせる"
+  },
+  {
+    "id": "grok-crm-ops",
+    "name": "CRM Operations Manager",
+    "category": "Sales",
+    "desc": "会議の前後にCRMと組織図のデータを整備し、手作業なしで記録を最新に保つ"
+  },
+  {
+    "id": "grok-daily-briefing",
+    "name": "Daily Briefing Writer",
+    "category": "General",
+    "desc": "自分に関係するニュースだけを絞り込んで、毎日の簡潔なブリーフィングを届ける"
+  },
+  {
+    "id": "grok-deal-desk",
+    "name": "Deal Desk Coordinator",
+    "category": "Sales",
+    "desc": "過去のメール・Salesforce・通話から社内向けの案件メモを作成し、承認後にSalesforceへ登録する"
+  },
+  {
+    "id": "grok-deck-updater",
+    "name": "Deck Updater",
+    "category": "Sales",
+    "desc": "商談中や直後のヒアリング内容をもとに資料を更新し、次のアクションも反映する"
+  },
+  {
+    "id": "grok-docs-auditor",
+    "name": "Docs Auditor",
+    "category": "Product",
+    "desc": "ヘルプセンターや社内資料と先週のリリース内容を比較し、古いページを見つけて書き直し案を作る"
+  },
+  {
+    "id": "grok-enablement",
+    "name": "Enablement Fulfillment Specialist",
+    "category": "Customer Success",
+    "desc": "Zoomの録画資料を探し、one-pagerを作成してDriveにアップロードし、リンク付きの返信を下書きする"
+  },
+  {
+    "id": "grok-event-screener",
+    "name": "Event Guest Screener",
+    "category": "Marketing",
+    "desc": "イベント応募者をICPに照らして採点し、適合度の高い人を招待ツールでまとめて承認する"
+  },
+  {
+    "id": "grok-executive-assistant",
+    "name": "Executive Assistant",
+    "category": "General",
+    "desc": "毎朝のブリーフィングを届け、新しいチャンネルに参加した際は直前の経緯を要約する"
+  },
+  {
+    "id": "grok-feature-tracker",
+    "name": "Feature Request Tracker",
+    "category": "Product",
+    "desc": "SlackやCallの内容から要望を集め、顧客と結びつけた一覧を継続的に管理する"
+  },
+  {
+    "id": "grok-hiring-screener",
+    "name": "Hiring Screener",
+    "category": "Recruiting",
+    "desc": "応募書類や課題の成果物を基準に評価し、面接に進める候補者をATS向けにまとめる"
+  },
+  {
+    "id": "grok-inbox-manager",
+    "name": "Inbox Manager",
+    "category": "General",
+    "desc": "メールを分類し、緊急や停滞中のスレッドを知らせ、返信や整理の下書きを作る。送信は必ず承認が必要"
+  },
+  {
+    "id": "grok-internal-comms",
+    "name": "Internal Communications Manager",
+    "category": "Marketing",
+    "desc": "対象者やチャネルに合わせた社内向け文面を作成する。レビュー専用で自動送信はしない"
+  },
+  {
+    "id": "grok-invoice-coordinator",
+    "name": "Invoice Coordinator",
+    "category": "Finance",
+    "desc": "請求書を受け取り、照合できるものは照合して、支払い状況を追跡し、人の対応が必要な場合は担当者に催促する"
+  },
+  {
+    "id": "grok-linkedin-campaign",
+    "name": "LinkedIn Campaign Manager",
+    "category": "Marketing",
+    "desc": "広告・フォーム・フォローアップ・UTMを通じたリード獲得の一貫性を管理し、キャンペーン案を承認用に作成する"
+  },
+  {
+    "id": "grok-marketing-calendar",
+    "name": "Marketing Calendar Owner",
+    "category": "Marketing",
+    "desc": "Notionのデータをもとに地域別・全社のコンテンツ、ローンチ、イベントの予定を同期させる"
+  },
+  {
+    "id": "grok-meeting-prep",
+    "name": "Meeting Prep Buddy",
+    "category": "Sales",
+    "desc": "カレンダー・議事録・CRM・Gong・Slackから、参加者、前回の接点、未解決事項、議題案をまとめた準備資料を作る"
+  },
+  {
+    "id": "grok-merch-fulfillment",
+    "name": "Merch Fulfillment Operator",
+    "category": "Marketing",
+    "desc": "見込み客へのグッズ送付を進め、応募フォームを確認して承認の依頼をチャットで行い、ベンダー向けの日次注文書を送る"
+  },
+  {
+    "id": "grok-newsletter-writer",
+    "name": "Newsletter Writer",
+    "category": "Marketing",
+    "desc": "ローンチや実績、カレンダーから月次のニュースレターを作成し、レビュー待ちとして保存する"
+  },
+  {
+    "id": "grok-onboarding-manager",
+    "name": "Onboarding Manager",
+    "category": "Recruiting",
+    "desc": "新入社員向けのチェックリストを作り、必要な資料をまとめ、初日の質問に答え、課題を適切な担当者に振り分ける"
+  },
+  {
+    "id": "grok-paid-media-creative",
+    "name": "Paid Media Creative Strategist",
+    "category": "Marketing",
+    "desc": "有望なクリエイティブを早期に見つけ、効果の理由に関する仮説と次のテスト案を提案する"
+  },
+  {
+    "id": "grok-personal-site",
+    "name": "Personal Site Builder",
+    "category": "Life",
+    "desc": "説明文から個人サイトの骨組みを作り、ドメインの問題を解決して公開できる状態にする"
+  },
+  {
+    "id": "grok-pipeline-analyst",
+    "name": "Pipeline Analyst",
+    "category": "Sales",
+    "desc": "SalesforceとシートのデータからSTALLや失注リスクを洗い出し、月曜日用のスコアボードを作る"
+  },
+  {
+    "id": "grok-playtest-operator",
+    "name": "Playtest Operator",
+    "category": "General",
+    "desc": "APIでは不十分な場合にPCでUIを操作してテストし、失敗を記録して検出事項をまとめる"
+  },
+  {
+    "id": "grok-presentation-designer",
+    "name": "Presentation Designer",
+    "category": "General",
+    "desc": "ブランドテンプレートに沿ってスライドを作成し、編集可能なリンクを届ける"
+  },
+  {
+    "id": "grok-product-feedback",
+    "name": "Product Feedback Analyst",
+    "category": "Product",
+    "desc": "複数のソースからフィードバックを集めてクラスタリングし、重要度と緊急度を評価して振り分け案を承認用に作る"
+  },
+  {
+    "id": "grok-prospecting-plan",
+    "name": "Prospecting Plan Builder",
+    "category": "Sales",
+    "desc": "連絡先を集め、メールや携帯番号を補完して、すぐ使えるトラッカーを作る"
+  },
+  {
+    "id": "grok-prototype-builder",
+    "name": "Prototype Builder",
+    "category": "Engineering",
+    "desc": "依頼から素早くクリック可能な試作品を作り、スクリーンショットと公開URLを返す"
+  },
+  {
+    "id": "grok-renewal-desk",
+    "name": "Renewal Desk Operator",
+    "category": "Sales",
+    "desc": "利用状況・チケット・Gong・CRMから、アカウントごとに90日分の更新準備資料を作り、条件が止まった場合のみ法務に連絡する"
+  },
+  {
+    "id": "grok-sales-call-coach",
+    "name": "Sales Call Coach",
+    "category": "Sales",
+    "desc": "Gongの通話を確認し、ヒアリング・反論対応・存在感についてタイムスタンプ付きで指導し、通話スコアを付ける"
+  },
+  {
+    "id": "grok-security-questionnaire",
+    "name": "Security Questionnaire Filler",
+    "category": "Finance",
+    "desc": "ベンダーのセキュリティ質問票サイトにログインし、信頼センターや過去のRFPから回答を作成して、送信は承認待ちにする"
+  },
+  {
+    "id": "grok-seo-auditor",
+    "name": "SEO / AEO Auditor",
+    "category": "Marketing",
+    "desc": "キーワード・技術面・AIプロンプト・競合の動きを一元管理し、順位の変化と修正すべきサイトの問題を示す"
+  },
+  {
+    "id": "grok-social-media",
+    "name": "Social Media Manager",
+    "category": "Marketing",
+    "desc": "過去の投稿を学習し、重要なリリースに合わせて下書きを作り、公開用に保存してキューを進める"
+  },
+  {
+    "id": "grok-status-report",
+    "name": "Status Report Writer",
+    "category": "General",
+    "desc": "資料・会議・Slackから未完了のアクションアイテムを集め、一つのリストと朝のダイジェストにまとめる"
+  },
+  {
+    "id": "grok-subscription-cleaner",
+    "name": "Subscription Cleaner",
+    "category": "Life",
+    "desc": "領収書やニュースレターのメールを整理し、解約候補を提案して、承認されたものの配信を停止する"
+  },
+  {
+    "id": "grok-ticket-triage",
+    "name": "Ticket Triage Specialist",
+    "category": "Customer Success",
+    "desc": "サポートチケットを定期的に確認し、返信の下書きのみ作成する。問題がなければ何もしない"
+  },
+  {
+    "id": "grok-travel-coordinator",
+    "name": "Travel Coordinator",
+    "category": "Life",
+    "desc": "航空券とホテルを自分のルールと比較し、予約前に確認を取り、旅程とカレンダーを作成する"
+  },
+  {
+    "id": "grok-vendor-portal",
+    "name": "Vendor Portal Operator",
+    "category": "Finance",
+    "desc": "APIのない調達・更新・シート管理のポータルを毎週操作し、例外のみ報告する"
+  }
+]
