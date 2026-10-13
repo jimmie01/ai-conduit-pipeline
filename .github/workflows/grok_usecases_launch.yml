@@ -8,13 +8,9 @@ on:
         required: true
         default: "grok-chief-of-staff"
       title:
-        description: "YouTube title"
+        description: "YouTube title (optional, auto-generated if empty)"
         required: false
         default: ""
-      batch_mode:
-        description: "Run all 56 usecases (true/false)"
-        required: false
-        default: "false"
 
 jobs:
   build:
@@ -36,19 +32,209 @@ jobs:
           npm install -g hyperframes
           echo "✅ 依存関係インストール完了"
 
-      - name: Generate HF templates
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup usecase info
+        id: info
         run: |
           SLUG="${{ github.event.inputs.slug }}"
-          echo "Processing: $SLUG"
 
-          # HFテンプレートが存在しない場合は生成
-          if [ ! -f "hf_original/${SLUG}/index.html" ]; then
-            python3 scripts/gen_grok_hf_templates.py --slug "$SLUG"
-            echo "✅ HF template generated for $SLUG"
+          # grok_usecases.jsonからメタ情報取得
+          python3 << PYEOF
+          import json, os, sys
+
+          slug = "$SLUG"
+          data = json.load(open('scripts/grok_usecases.json'))
+          uc = next((u for u in data if u['id'] == slug), None)
+
+          if not uc:
+              print(f"ERROR: {slug} not found in grok_usecases.json", file=sys.stderr)
+              sys.exit(1)
+
+          name = uc['name']
+          cat = uc['category']
+          desc = uc.get('desc', '')
+
+          CATEGORY_JA = {
+              "General": "汎用", "Sales": "営業", "Marketing": "マーケティング",
+              "Customer Success": "カスタマーサクセス", "Recruiting": "採用",
+              "Finance": "財務", "Engineering": "エンジニアリング",
+              "Product": "プロダクト", "Life": "ライフスタイル",
+          }
+          cat_ja = CATEGORY_JA.get(cat, cat)
+
+          # GitHub Output
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"name={name}\n")
+              f.write(f"category={cat}\n")
+              f.write(f"cat_ja={cat_ja}\n")
+              desc_safe = desc.replace('\n',' ').replace("'","")[:100]
+              f.write(f"desc={desc_safe}\n")
+
+          title = "${{ github.event.inputs.title }}"
+          if not title.strip():
+              title = f"Grok Bot「{name}」の使い方 #GrokBot #AI活用 #自動化"
+
+          with open('/tmp/video_title.txt', 'w') as f:
+              f.write(title)
+
+          description = f"""Grok Botの「{name}」機能を解説します。
+
+          {desc}
+
+          ✅ x.ai/botで無料体験できます
+
+          #GrokBot #xAI #AI活用 #{cat_ja} #自動化 #生産性向上 #AIアシスタント"""
+
+          with open('/tmp/video_description.txt', 'w') as f:
+              f.write(description)
+
+          print(f"✅ {name} ({cat_ja}) ready")
+          PYEOF
+
+          echo "✅ info setup complete"
+
+      - name: Generate HF templates
+        run: |
+          SLUG="${{ github.event.inputs.slug }}"
+
+          # HFテンプレートが既存かチェック
+          if [ -d "hf_original/${SLUG}" ]; then
+            echo "✅ HF template already exists: hf_original/${SLUG}"
+            ls hf_original/${SLUG}/compositions/ 2>/dev/null || true
           else
-            echo "✅ HF template already exists for $SLUG"
+            echo "📝 Generating HF template for ${SLUG}..."
+            python3 << PYEOF
+          import json, os
+
+          slug = "$SLUG"
+          data = json.load(open('scripts/grok_usecases.json'))
+          uc = next((u for u in data if u['id'] == slug), {})
+
+          name = uc.get('name', slug)
+          cat = uc.get('category', 'General')
+          desc = uc.get('desc', '')
+
+          CATEGORY_COLORS = {
+              "General":          {"bg": "#0a0a0a", "text": "#ffffff", "accent": "#00d4ff"},
+              "Sales":            {"bg": "#0a0f1a", "text": "#ffffff", "accent": "#ff6b35"},
+              "Marketing":        {"bg": "#0f0a1a", "text": "#ffffff", "accent": "#b44fff"},
+              "Customer Success": {"bg": "#0a1a10", "text": "#ffffff", "accent": "#00ff88"},
+              "Recruiting":       {"bg": "#1a0a0a", "text": "#ffffff", "accent": "#ff4488"},
+              "Finance":          {"bg": "#0a1a15", "text": "#ffffff", "accent": "#00ffcc"},
+              "Engineering":      {"bg": "#0a0f15", "text": "#ffffff", "accent": "#4488ff"},
+              "Product":          {"bg": "#150a1a", "text": "#ffffff", "accent": "#ff88ff"},
+              "Life":             {"bg": "#1a1a0a", "text": "#ffffff", "accent": "#ffdd00"},
+          }
+          CATEGORY_JA = {
+              "General": "汎用", "Sales": "営業", "Marketing": "マーケティング",
+              "Customer Success": "カスタマーサクセス", "Recruiting": "採用",
+              "Finance": "財務", "Engineering": "エンジニアリング",
+              "Product": "プロダクト", "Life": "ライフスタイル",
+          }
+
+          colors = CATEGORY_COLORS.get(cat, CATEGORY_COLORS["General"])
+          bg, text_c, accent = colors["bg"], colors["text"], colors["accent"]
+          cat_ja = CATEGORY_JA.get(cat, cat)
+
+          scenes = {
+              "hook": {
+                  "main": f"Grok Bot<br>{name}",
+                  "sub": f"#{cat_ja} #GrokBot #AI活用",
+                  "badge": "新機能"
+              },
+              "problem": {
+                  "main": f"{cat_ja}の<br>課題を解決",
+                  "sub": desc[:40] + "..." if len(desc) > 40 else desc,
+                  "badge": "PROBLEM"
+              },
+              "solution": {
+                  "main": "Grok Botで<br>全自動化",
+                  "sub": f"{name}が365日稼働",
+                  "badge": "SOLUTION"
+              },
+              "demo": {
+                  "main": "導入は<br>簡単3ステップ",
+                  "sub": "x.ai/botで今すぐ無料体験",
+                  "badge": "DEMO"
+              },
+              "cta": {
+                  "main": "今すぐ試す",
+                  "sub": "x.ai/bot",
+                  "badge": "FREE"
+              }
+          }
+
+          def make_html(s_data):
+              return f"""<!DOCTYPE html>
+          <html>
+          <head><meta charset="utf-8">
+          <style>
+          * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+          body {{
+            width: 1080px; height: 1920px;
+            background: {bg};
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            font-family: 'Noto Sans JP', sans-serif; overflow: hidden;
+            position: relative;
+          }}
+          .badge {{
+            position: absolute; top: 120px;
+            background: {accent}; color: #000;
+            font-size: 36px; font-weight: 900;
+            padding: 12px 40px; border-radius: 50px;
+          }}
+          .cat {{ position: absolute; top: 220px; font-size: 32px; color: {accent}; opacity: 0.8; }}
+          .main {{ font-size: 96px; font-weight: 900; color: {text_c}; text-align: center;
+            line-height: 1.2; padding: 0 60px; text-shadow: 0 0 40px {accent}80;
+            animation: fadeIn 0.8s ease forwards; }}
+          .line {{ width: 200px; height: 6px; background: {accent}; margin: 40px auto; border-radius: 3px; }}
+          .sub {{ font-size: 48px; font-weight: 400; color: {accent}; text-align: center;
+            margin-top: 20px; padding: 0 80px; animation: slideUp 1s ease 0.3s both; }}
+          .footer {{ position: absolute; bottom: 180px; font-size: 34px; color: {text_c}; opacity: 0.5; }}
+          @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(30px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+          @keyframes slideUp {{ from {{ opacity: 0; transform: translateY(80px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+          </style></head>
+          <body>
+          <div class="badge">{s_data["badge"]}</div>
+          <div class="cat">#{cat_ja.upper()}</div>
+          <div class="main">{s_data["main"]}</div>
+          <div class="line"></div>
+          <div class="sub">{s_data["sub"]}</div>
+          <div class="footer">Powered by Grok Bot × xAI</div>
+          </body></html>"""
+
+          # ディレクトリ作成
+          os.makedirs(f"hf_original/{slug}/compositions", exist_ok=True)
+          os.makedirs(f"hf_original/{slug}/assets", exist_ok=True)
+
+          # 各シーン生成
+          for scene_name, s_data in scenes.items():
+              with open(f"hf_original/{slug}/compositions/{scene_name}.html", "w", encoding="utf-8") as f:
+                  f.write(make_html(s_data))
+              print(f"✅ {scene_name}.html")
+
+          # index.html
+          index_html = f"""<!DOCTYPE html>
+          <html><head><meta charset="utf-8"><title>{slug}</title></head>
+          <body style="margin:0">
+          <script>
+          const scenes = ["hook","problem","solution","demo","cta"];
+          const durations = [3000,3000,3000,3000,3000];
+          let i = 0;
+          function next() {{
+            if(i >= scenes.length) return;
+            document.body.innerHTML = '<iframe src="compositions/' + scenes[i] + '.html" style="width:1080px;height:1920px;border:none"></iframe>';
+            setTimeout(() => {{ i++; next(); }}, durations[i]);
+          }}
+          next();
+          </script></body></html>"""
+
+          with open(f"hf_original/{slug}/index.html", "w") as f:
+              f.write(index_html)
+
+          print(f"✅ All templates generated for {slug}")
+          PYEOF
+            echo "✅ HF template generation complete"
           fi
 
       - name: Render HF scenes
@@ -56,35 +242,41 @@ jobs:
           SLUG="${{ github.event.inputs.slug }}"
           mkdir -p /tmp/clips
 
-          # HFレンダリング（5シーン × 3秒 = 15秒）
-          HF_VIDEO_COVERAGE_THRESHOLD=0 hyperframes render "hf_original/${SLUG}" -o /tmp/hf_full.mp4 2>/dev/null || true
+          echo "Rendering HF: hf_original/${SLUG}"
+          HF_VIDEO_COVERAGE_THRESHOLD=0 hyperframes render "hf_original/${SLUG}" -o /tmp/hf_full.mp4 2>&1 | tail -5
 
           if [ -f "/tmp/hf_full.mp4" ]; then
             echo "✅ HF render complete"
-            # 各シーンを3秒ずつ切り出し
-            for i in 0 1 2 3 4; do
-              SCENE_NAME=$(python3 -c "scenes=['hook','problem','solution','demo','cta']; print(scenes[$i])")
+            DURATION=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 /tmp/hf_full.mp4 2>/dev/null || echo "15")
+            echo "Total duration: ${DURATION}s"
+
+            # 5シーン × 3秒
+            SCENES="hook problem solution demo cta"
+            i=0
+            for SCENE in $SCENES; do
               START=$((i * 3))
-              ffmpeg -i /tmp/hf_full.mp4 -ss $START -t 3 -r 30 -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p "/tmp/clips/hf_${SCENE_NAME}.mp4" -y 2>/dev/null && echo "✅ ${SCENE_NAME} 3秒"
+              ffmpeg -i /tmp/hf_full.mp4 -ss $START -t 3 -r 30 \
+                -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p \
+                "/tmp/clips/hf_${SCENE}.mp4" -y 2>/dev/null
+              echo "✅ ${SCENE}.mp4 (${START}s-$((START+3))s)"
+              i=$((i+1))
             done
           else
-            echo "⚠️ HF render failed, creating fallback slides"
-            python3 << 'PYEOF'
+            echo "⚠️ HF render failed, using ffmpeg fallback"
+            python3 -c "
           import subprocess, os
-          slug = os.environ.get('SLUG','grok-chief-of-staff')
+          slug = os.environ.get('SLUG','')
           scenes = ['hook','problem','solution','demo','cta']
-          colors = ['#0a0a0a','#0a0f1a','#0f0a1a','#0a1a10','#150a1a']
-          for i, (scene, color) in enumerate(zip(scenes, colors)):
-              ffmpeg_cmd = [
+          colors = ['0a0a0a','0a0f1a','0f0a1a','0a1a10','150a1a']
+          for scene, color in zip(scenes, colors):
+              subprocess.run([
                   'ffmpeg', '-f', 'lavfi',
-                  '-i', f'color=c={color}:size=1080x1920:rate=30:duration=3',
-                  '-vf', f"drawtext=text='{slug}\\n{scene}':fontsize=80:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2",
+                  '-i', f'color=c=0x{color}:size=1080x1920:rate=30:duration=3',
                   '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
                   f'/tmp/clips/hf_{scene}.mp4', '-y'
-              ]
-              subprocess.run(ffmpeg_cmd, capture_output=True)
+              ], capture_output=True)
               print(f'✅ fallback {scene}')
-          PYEOF
+          " SLUG="${SLUG}"
           fi
 
           ls -lh /tmp/clips/
@@ -94,21 +286,17 @@ jobs:
       - name: Generate TTS and caption
         run: |
           SLUG="${{ github.event.inputs.slug }}"
+          echo "Generating TTS for: $SLUG"
+          python3 -c "import edge_tts; print('✅ edge_tts OK')"
           python3 scripts/gen_caption_composition.py "$SLUG"
-          echo "✅ TTS & caption 生成完了"
+          ls -lh /tmp/*.mp3 /tmp/*.srt 2>/dev/null || true
 
       - name: Compose final video
         run: |
           SLUG="${{ github.event.inputs.slug }}"
           mkdir -p /tmp/output
 
-          # 音声ファイル確認
-          AUDIO_FILE="/tmp/${SLUG}.mp3"
-          if [ ! -f "$AUDIO_FILE" ]; then
-            AUDIO_FILE="/tmp/tts.mp3"
-          fi
-
-          # クリップリスト作成
+          # クリップ結合
           cat > /tmp/clip_list.txt << 'EOF'
           file '/tmp/clips/hf_hook.mp4'
           file '/tmp/clips/hf_problem.mp4'
@@ -117,17 +305,20 @@ jobs:
           file '/tmp/clips/hf_cta.mp4'
           EOF
 
-          # 動画結合
           ffmpeg -f concat -safe 0 -i /tmp/clip_list.txt \
             -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p \
             /tmp/video_no_audio.mp4 -y 2>/dev/null && echo "✅ クリップ結合完了"
 
           # 音声合成
-          if [ -f "$AUDIO_FILE" ]; then
+          AUDIO_FILE=""
+          for f in "/tmp/${SLUG}.mp3" "/tmp/tts.mp3"; do
+            if [ -f "$f" ]; then AUDIO_FILE="$f"; break; fi
+          done
+
+          if [ -n "$AUDIO_FILE" ]; then
             ffmpeg -i /tmp/video_no_audio.mp4 -i "$AUDIO_FILE" \
               -map 0:v -map 1:a \
-              -c:v copy -c:a aac -b:a 128k \
-              -shortest \
+              -c:v copy -c:a aac -b:a 128k -shortest \
               "/tmp/output/${SLUG}_final.mp4" -y 2>/dev/null && echo "✅ 音声合成完了"
           else
             cp /tmp/video_no_audio.mp4 "/tmp/output/${SLUG}_final.mp4"
@@ -143,51 +334,35 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: |
           SLUG="${{ github.event.inputs.slug }}"
-
-          # タイトル生成
-          TITLE="${{ github.event.inputs.title }}"
-          if [ -z "$TITLE" ]; then
-            TITLE=$(python3 -c "
-          import json
-          data = json.load(open('scripts/grok_usecases.json'))
-          uc = next((u for u in data if u['id'] == '$SLUG'), None)
-          if uc:
-              print(f'Grok Bot {uc[\"name\"]}の使い方 #GrokBot #AI活用 #自動化')
-          else:
-              print(f'Grok Bot {SLUG} 解説')
-          ")
-          fi
-
-          DESCRIPTION=$(python3 -c "
-          import json
-          data = json.load(open('scripts/grok_usecases.json'))
-          uc = next((u for u in data if u['id'] == '$SLUG'), None)
-          if uc:
-              desc = uc.get('desc','')
-              cat = uc.get('category','')
-              print(f'''Grok Botの{uc[\"name\"]}機能を解説します。
-
-          {desc}
-
-          ✅ x.ai/botで無料体験できます
-
-          #GrokBot #xAI #AI活用 #{cat} #自動化 #生産性向上''')
-          ")
-
+          TITLE=$(cat /tmp/video_title.txt 2>/dev/null || echo "Grok Bot ${SLUG} 解説")
+          DESCRIPTION=$(cat /tmp/video_description.txt 2>/dev/null || echo "Grok Bot活用ガイド")
           VIDEO_FILE="/tmp/output/${SLUG}_final.mp4"
           SRT_FILE="/tmp/${SLUG}.srt"
 
-          python3 scripts/youtube_upload.py \
-            "$VIDEO_FILE" \
-            "$TITLE" \
-            "$DESCRIPTION" \
-            "${SRT_FILE}" || echo "⚠️ Upload failed"
+          echo "Uploading: $TITLE"
 
-          echo "✅ YouTube upload complete: $TITLE"
+          if [ -f "$VIDEO_FILE" ]; then
+            python3 scripts/youtube_upload.py \
+              "$VIDEO_FILE" \
+              "$TITLE" \
+              "$DESCRIPTION" \
+              "${SRT_FILE}" 2>&1 || echo "⚠️ Upload failed (check YouTube credentials)"
+            echo "✅ Upload complete: $TITLE"
+          else
+            echo "❌ Video file not found: $VIDEO_FILE"
+            exit 1
+          fi
 
       - name: Summary
+        if: always()
         run: |
           SLUG="${{ github.event.inputs.slug }}"
-          echo "## ✅ Grok Usecase Video Complete" >> $GITHUB_STEP_SUMMARY
+          echo "## Grok Usecase Video: $SLUG" >> $GITHUB_STEP_SUMMARY
           echo "- Slug: \`$SLUG\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: Uploaded to YouTube" >> $GITHUB_STEP_SUMMARY
+          if [ -f "/tmp/output/${SLUG}_final.mp4" ]; then
+            echo "- Video: ✅ Generated" >> $GITHUB_STEP_SUMMARY
+          fi
+          TITLE=$(cat /tmp/video_title.txt 2>/dev/null || echo "")
+          if [ -n "$TITLE" ]; then
+            echo "- Title: $TITLE" >> $GITHUB_STEP_SUMMARY
+          fi
