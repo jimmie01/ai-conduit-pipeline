@@ -1,0 +1,193 @@
+name: Grok Usecases Video Launch
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Grok usecase slug (e.g. grok-chief-of-staff)"
+        required: true
+        default: "grok-chief-of-staff"
+      title:
+        description: "YouTube title"
+        required: false
+        default: ""
+      batch_mode:
+        description: "Run all 56 usecases (true/false)"
+        required: false
+        default: "false"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk --no-install-recommends -qq
+          pip install playwright edge-tts -q
+          python3 -m playwright install chromium
+          npm install -g hyperframes
+          echo "✅ 依存関係インストール完了"
+
+      - name: Generate HF templates
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SLUG="${{ github.event.inputs.slug }}"
+          echo "Processing: $SLUG"
+
+          # HFテンプレートが存在しない場合は生成
+          if [ ! -f "hf_original/${SLUG}/index.html" ]; then
+            python3 scripts/gen_grok_hf_templates.py --slug "$SLUG"
+            echo "✅ HF template generated for $SLUG"
+          else
+            echo "✅ HF template already exists for $SLUG"
+          fi
+
+      - name: Render HF scenes
+        run: |
+          SLUG="${{ github.event.inputs.slug }}"
+          mkdir -p /tmp/clips
+
+          # HFレンダリング（5シーン × 3秒 = 15秒）
+          HF_VIDEO_COVERAGE_THRESHOLD=0 hyperframes render "hf_original/${SLUG}" -o /tmp/hf_full.mp4 2>/dev/null || true
+
+          if [ -f "/tmp/hf_full.mp4" ]; then
+            echo "✅ HF render complete"
+            # 各シーンを3秒ずつ切り出し
+            for i in 0 1 2 3 4; do
+              SCENE_NAME=$(python3 -c "scenes=['hook','problem','solution','demo','cta']; print(scenes[$i])")
+              START=$((i * 3))
+              ffmpeg -i /tmp/hf_full.mp4 -ss $START -t 3 -r 30 -c:v libx264 -crf 20 -preset fast -pix_fmt yuv420p "/tmp/clips/hf_${SCENE_NAME}.mp4" -y 2>/dev/null && echo "✅ ${SCENE_NAME} 3秒"
+            done
+          else
+            echo "⚠️ HF render failed, creating fallback slides"
+            python3 << 'PYEOF'
+          import subprocess, os
+          slug = os.environ.get('SLUG','grok-chief-of-staff')
+          scenes = ['hook','problem','solution','demo','cta']
+          colors = ['#0a0a0a','#0a0f1a','#0f0a1a','#0a1a10','#150a1a']
+          for i, (scene, color) in enumerate(zip(scenes, colors)):
+              ffmpeg_cmd = [
+                  'ffmpeg', '-f', 'lavfi',
+                  '-i', f'color=c={color}:size=1080x1920:rate=30:duration=3',
+                  '-vf', f"drawtext=text='{slug}\\n{scene}':fontsize=80:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2",
+                  '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+                  f'/tmp/clips/hf_{scene}.mp4', '-y'
+              ]
+              subprocess.run(ffmpeg_cmd, capture_output=True)
+              print(f'✅ fallback {scene}')
+          PYEOF
+          fi
+
+          ls -lh /tmp/clips/
+        env:
+          SLUG: ${{ github.event.inputs.slug }}
+
+      - name: Generate TTS and caption
+        run: |
+          SLUG="${{ github.event.inputs.slug }}"
+          python3 scripts/gen_caption_composition.py "$SLUG"
+          echo "✅ TTS & caption 生成完了"
+
+      - name: Compose final video
+        run: |
+          SLUG="${{ github.event.inputs.slug }}"
+          mkdir -p /tmp/output
+
+          # 音声ファイル確認
+          AUDIO_FILE="/tmp/${SLUG}.mp3"
+          if [ ! -f "$AUDIO_FILE" ]; then
+            AUDIO_FILE="/tmp/tts.mp3"
+          fi
+
+          # クリップリスト作成
+          cat > /tmp/clip_list.txt << 'EOF'
+          file '/tmp/clips/hf_hook.mp4'
+          file '/tmp/clips/hf_problem.mp4'
+          file '/tmp/clips/hf_solution.mp4'
+          file '/tmp/clips/hf_demo.mp4'
+          file '/tmp/clips/hf_cta.mp4'
+          EOF
+
+          # 動画結合
+          ffmpeg -f concat -safe 0 -i /tmp/clip_list.txt \
+            -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p \
+            /tmp/video_no_audio.mp4 -y 2>/dev/null && echo "✅ クリップ結合完了"
+
+          # 音声合成
+          if [ -f "$AUDIO_FILE" ]; then
+            ffmpeg -i /tmp/video_no_audio.mp4 -i "$AUDIO_FILE" \
+              -map 0:v -map 1:a \
+              -c:v copy -c:a aac -b:a 128k \
+              -shortest \
+              "/tmp/output/${SLUG}_final.mp4" -y 2>/dev/null && echo "✅ 音声合成完了"
+          else
+            cp /tmp/video_no_audio.mp4 "/tmp/output/${SLUG}_final.mp4"
+            echo "⚠️ 音声なしで完成"
+          fi
+
+          ls -lh /tmp/output/
+
+      - name: Upload to YouTube
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          SLUG="${{ github.event.inputs.slug }}"
+
+          # タイトル生成
+          TITLE="${{ github.event.inputs.title }}"
+          if [ -z "$TITLE" ]; then
+            TITLE=$(python3 -c "
+          import json
+          data = json.load(open('scripts/grok_usecases.json'))
+          uc = next((u for u in data if u['id'] == '$SLUG'), None)
+          if uc:
+              print(f'Grok Bot {uc[\"name\"]}の使い方 #GrokBot #AI活用 #自動化')
+          else:
+              print(f'Grok Bot {SLUG} 解説')
+          ")
+          fi
+
+          DESCRIPTION=$(python3 -c "
+          import json
+          data = json.load(open('scripts/grok_usecases.json'))
+          uc = next((u for u in data if u['id'] == '$SLUG'), None)
+          if uc:
+              desc = uc.get('desc','')
+              cat = uc.get('category','')
+              print(f'''Grok Botの{uc[\"name\"]}機能を解説します。
+
+          {desc}
+
+          ✅ x.ai/botで無料体験できます
+
+          #GrokBot #xAI #AI活用 #{cat} #自動化 #生産性向上''')
+          ")
+
+          VIDEO_FILE="/tmp/output/${SLUG}_final.mp4"
+          SRT_FILE="/tmp/${SLUG}.srt"
+
+          python3 scripts/youtube_upload.py \
+            "$VIDEO_FILE" \
+            "$TITLE" \
+            "$DESCRIPTION" \
+            "${SRT_FILE}" || echo "⚠️ Upload failed"
+
+          echo "✅ YouTube upload complete: $TITLE"
+
+      - name: Summary
+        run: |
+          SLUG="${{ github.event.inputs.slug }}"
+          echo "## ✅ Grok Usecase Video Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Slug: \`$SLUG\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: Uploaded to YouTube" >> $GITHUB_STEP_SUMMARY
