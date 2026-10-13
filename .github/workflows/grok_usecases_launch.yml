@@ -41,12 +41,12 @@ jobs:
       - name: Generate HF templates
         env:
           SLUG: ${{ github.event.inputs.slug }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -d "hf_original/${SLUG}" ]; then
-            echo "HF template exists"
+            echo "HF template exists: hf_original/${SLUG}"
           else
-            python3 scripts/gen_grok_hf_templates.py --slug "$SLUG"
+            echo "Generating HF templates for ${SLUG}..."
+            python3 scripts/gen_hf_inline.py "${SLUG}"
           fi
 
       - name: Render HF scenes
@@ -80,7 +80,7 @@ jobs:
         env:
           SLUG: ${{ github.event.inputs.slug }}
         run: |
-          timeout 120 python3 scripts/gen_caption_composition.py "$SLUG" || echo "TTS skipped"
+          timeout 120 python3 scripts/gen_caption_composition.py "${SLUG}" || echo "TTS skipped"
 
       - name: Compose final video
         env:
@@ -93,7 +93,7 @@ jobs:
             /tmp/video_no_audio.mp4 -y 2>/dev/null
           AUDIO_FILE=""
           for f in "/tmp/${SLUG}.mp3" "/tmp/tts.mp3"; do
-            if [ -f "$f" ]; then AUDIO_FILE="$f"; break; fi
+            [ -f "$f" ] && AUDIO_FILE="$f" && break
           done
           if [ -n "$AUDIO_FILE" ]; then
             ffmpeg -i /tmp/video_no_audio.mp4 -i "$AUDIO_FILE" \
@@ -115,23 +115,19 @@ jobs:
         run: |
           VIDEO_FILE="/tmp/output/${SLUG}_final.mp4"
           if [ ! -f "$VIDEO_FILE" ]; then
-            echo "ERROR: Video not found: $VIDEO_FILE"
+            echo "ERROR: Video not found"
             exit 1
           fi
           cp "$VIDEO_FILE" output.mp4
           echo "output.mp4: $(ls -lh output.mp4 | awk '{print $5}')"
-          python3 scripts/youtube_upload_direct.py "$SLUG"
+          python3 scripts/youtube_upload_direct.py "${SLUG}"
 
       - name: Summary
         if: always()
         env:
           SLUG: ${{ github.event.inputs.slug }}
         run: |
-          echo "## Grok Usecase Video: $SLUG" >> $GITHUB_STEP_SUMMARY
-          echo "- Slug: \`$SLUG\`" >> $GITHUB_STEP_SUMMARY
-          if [ -f "/tmp/output/${SLUG}_final.mp4" ]; then
-            SIZE=$(ls -lh "/tmp/output/${SLUG}_final.mp4" | awk '{print $5}')
-            echo "- Video: generated ($SIZE)" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "## Grok Usecase Video: ${SLUG}" >> $GITHUB_STEP_SUMMARY
+          [ -f "/tmp/output/${SLUG}_final.mp4" ] && echo "- Video: generated" >> $GITHUB_STEP_SUMMARY
           TITLE=$(cat /tmp/video_title.txt 2>/dev/null || echo "")
           [ -n "$TITLE" ] && echo "- Title: $TITLE" >> $GITHUB_STEP_SUMMARY
