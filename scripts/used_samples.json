@@ -55,5 +55,6 @@
   "DigUp",
   "craft-launcher",
   "d2r-mobile",
-  "esp32-iphone-agent"
+  "esp32-iphone-agent",
+  "qwen21-nsfw-pose-skill"
 ]
