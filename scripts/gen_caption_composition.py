@@ -1327,6 +1327,20 @@ NARRATION_DATA["cn-math-taxonomy-launch"] = {
     ],
     "rate": "+15%"
 }
+NARRATION_DATA["rubix-lang-launch"] = {
+    "chunks": [
+        "Rubix-langが1902スターを獲得しました。",
+        "The 100% Pure x86-64 Assembly Systems La。",
+        "Rubix-langは使いやすく設計されています。",
+        "インストールはコマンド一発で完了します。",
+        "実際に動かすと驚くほど速く動作します。",
+        "GitHubで1902スター、急速に拡大しています。",
+        "この動画の各シーンにパスワードが隠されています。全シーンをスクショしてClaudeやGPTに画像解析させてみてください。",
+        "いいねと保存もお願いします。",
+        "概要欄のURLでパスワードを入力すると無料テンプレートが受け取れます。"
+    ],
+    "rate": "+15%"
+}
 FALLBACK_NARRATIONS = {
     "variables-launch": "HyperFramesのVariables機能を紹介します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。",
     "spacex-launch": "Claude CodeとHyperFramesを使ったシネマティック動画です。コメントにAI Conduitと書いてください。",
