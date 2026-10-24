@@ -1,0 +1,35 @@
+name: Get Channel URL
+on:
+  workflow_dispatch:
+jobs:
+  get:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install google-api-python-client google-auth
+      - run: |
+          python3 << 'PYEOF'
+          import os
+          from google.oauth2.credentials import Credentials
+          from googleapiclient.discovery import build
+          creds = Credentials(
+              token=None,
+              refresh_token=os.environ['YOUTUBE_REFRESH_TOKEN'],
+              client_id=os.environ['YOUTUBE_CLIENT_ID'],
+              client_secret=os.environ['YOUTUBE_CLIENT_SECRET'],
+              token_uri='https://oauth2.googleapis.com/token',
+              scopes=['https://www.googleapis.com/auth/youtube.readonly']
+          )
+          yt = build('youtube', 'v3', credentials=creds)
+          ch = yt.channels().list(part='snippet', mine=True).execute()
+          item = ch['items'][0]
+          print("CHANNEL_ID:", item['id'])
+          print("CHANNEL_TITLE:", item['snippet']['title'])
+          print("CUSTOM_URL:", item['snippet'].get('customUrl',''))
+          PYEOF
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
