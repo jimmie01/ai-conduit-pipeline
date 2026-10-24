@@ -1,0 +1,62 @@
+[
+  {
+    "id": "claude-grok-sales-email",
+    "name": "Sales Email Automator",
+    "category": "Claude×Grok",
+    "desc": "GrokでリードをリサーチしてClaudeで最適な営業メールを生成。手動作業をゼロにする合わせ技"
+  },
+  {
+    "id": "claude-grok-competitive-report",
+    "name": "Competitive Report Builder",
+    "category": "Claude×Grok",
+    "desc": "Grokのリアルタイム検索で最新情報を収集し、Claudeで構造化レポートに仕上げる。調査時間を90%削減"
+  },
+  {
+    "id": "claude-grok-sns-content",
+    "name": "SNS Content Generator",
+    "category": "Claude×Grok",
+    "desc": "GrokでX/Twitterのトレンドをリアルタイム把握し、Claudeで複数プラットフォーム向けコンテンツを一括生成"
+  },
+  {
+    "id": "claude-grok-code-review",
+    "name": "Code Gen & Review Bot",
+    "category": "Claude×Grok",
+    "desc": "Claudeでコードを生成、Grokで最新ライブラリ情報を照合しながらレビュー。開発速度を3倍にする合わせ技"
+  },
+  {
+    "id": "claude-grok-meeting-to-task",
+    "name": "Meeting to Task Converter",
+    "category": "Claude×Grok",
+    "desc": "Claudeで会議の録音を要約、Grokで関連する最新情報を補完してタスクに優先度をつける"
+  },
+  {
+    "id": "claude-grok-market-research",
+    "name": "Market Research Agent",
+    "category": "Claude×Grok",
+    "desc": "Grokで業界の最新ニュースと数字を収集、Claudeで投資家・経営者向けレポートに仕上げる完全自動化フロー"
+  },
+  {
+    "id": "claude-grok-youtube-script",
+    "name": "YouTube Script Factory",
+    "category": "Claude×Grok",
+    "desc": "Grokでバズっているトレンドキーワードをリサーチし、ClaudeでSEO最適化された台本を自動生成"
+  },
+  {
+    "id": "claude-grok-support-bot",
+    "name": "Customer Support Bot Builder",
+    "category": "Claude×Grok",
+    "desc": "Grokで最新FAQと製品情報を常に最新化、ClaudeでUXを磨いたサポート対話を実現。解決率95%超を目指す設計"
+  },
+  {
+    "id": "claude-grok-press-release",
+    "name": "Press Release Writer",
+    "category": "Claude×Grok",
+    "desc": "Grokで業界トレンドと競合動向を把握、Claudeでメディアに刺さるプレスリリースを生成。広報コストをゼロに"
+  },
+  {
+    "id": "claude-grok-business-plan",
+    "name": "Business Plan Generator",
+    "category": "Claude×Grok",
+    "desc": "Grokで市場規模・競合データをリアルタイム収集、Claudeで投資家向け事業計画書の全セクションを一気に生成"
+  }
+]
