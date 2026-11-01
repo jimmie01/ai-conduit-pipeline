@@ -1537,6 +1537,20 @@ NARRATION_DATA["totk-pc-recomp-launch"] = {
     ],
     "rate": "+15%"
 }
+NARRATION_DATA["dsh-superagent-prototype-launch"] = {
+    "chunks": [
+        "dsh-superagent-prototypeが4107スターを獲得しました。",
+        "Towards a More Autonomous Agent System。",
+        "dsh-superagent-prototypeは使いやすく設計されています。",
+        "インストールはコマンド一発で完了します。",
+        "実際に動かすと驚くほど速く動作します。",
+        "GitHubで4107スター、急速に拡大しています。",
+        "この動画の各シーンにパスワードが隠されています。全シーンをスクショしてClaudeやGPTに画像解析させてみてください。",
+        "いいねと保存もお願いします。",
+        "概要欄のURLでパスワードを入力すると無料テンプレートが受け取れます。"
+    ],
+    "rate": "+15%"
+}
 FALLBACK_NARRATIONS = {
     "variables-launch": "HyperFramesのVariables機能を紹介します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。",
     "spacex-launch": "Claude CodeとHyperFramesを使ったシネマティック動画です。コメントにAI Conduitと書いてください。",
