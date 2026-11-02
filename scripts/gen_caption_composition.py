@@ -1551,6 +1551,20 @@ NARRATION_DATA["dsh-superagent-prototype-launch"] = {
     ],
     "rate": "+15%"
 }
+NARRATION_DATA["unslop-launch"] = {
+    "chunks": [
+        "unslopが4895スターを獲得しました。",
+        "A Claude skill that turns vibecoded, AI-。",
+        "unslopは使いやすく設計されています。",
+        "インストールはコマンド一発で完了します。",
+        "実際に動かすと驚くほど速く動作します。",
+        "GitHubで4895スター、急速に拡大しています。",
+        "この動画の各シーンにパスワードが隠されています。全シーンをスクショしてClaudeやGPTに画像解析させてみてください。",
+        "いいねと保存もお願いします。",
+        "概要欄のURLでパスワードを入力すると無料テンプレートが受け取れます。"
+    ],
+    "rate": "+15%"
+}
 FALLBACK_NARRATIONS = {
     "variables-launch": "HyperFramesのVariables機能を紹介します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。",
     "spacex-launch": "Claude CodeとHyperFramesを使ったシネマティック動画です。コメントにAI Conduitと書いてください。",
