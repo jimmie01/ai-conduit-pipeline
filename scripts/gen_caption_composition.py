@@ -1607,6 +1607,20 @@ NARRATION_DATA["pixelfx-launch"] = {
     ],
     "rate": "+15%"
 }
+NARRATION_DATA["run-launch"] = {
+    "chunks": [
+        "RUNが3106スターを獲得しました。",
+        "RUN · 润：海外移居手册（欧洲 36 国 · 110 条路线 · 主要移民地。",
+        "RUNは使いやすく設計されています。",
+        "インストールはコマンド一発で完了します。",
+        "実際に動かすと驚くほど速く動作します。",
+        "GitHubで3106スター、急速に拡大しています。",
+        "この動画の各シーンにパスワードが隠されています。全シーンをスクショしてClaudeやGPTに画像解析させてみてください。",
+        "いいねと保存もお願いします。",
+        "概要欄のURLでパスワードを入力すると無料テンプレートが受け取れます。"
+    ],
+    "rate": "+15%"
+}
 FALLBACK_NARRATIONS = {
     "variables-launch": "HyperFramesのVariables機能を紹介します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。",
     "spacex-launch": "Claude CodeとHyperFramesを使ったシネマティック動画です。コメントにAI Conduitと書いてください。",
