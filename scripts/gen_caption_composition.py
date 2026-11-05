@@ -1635,6 +1635,20 @@ NARRATION_DATA["eglantine-launch"] = {
     ],
     "rate": "+15%"
 }
+NARRATION_DATA["agent-autoloop-launch"] = {
+    "chunks": [
+        "agent-autoloopが2624スターを獲得しました。",
+        "让你的命令行 Agent 在后台自己接活、自己跟进到底；平时不烦你，遇到拿不准的。",
+        "agent-autoloopは使いやすく設計されています。",
+        "インストールはコマンド一発で完了します。",
+        "実際に動かすと驚くほど速く動作します。",
+        "GitHubで2624スター、急速に拡大しています。",
+        "この動画の各シーンにパスワードが隠されています。全シーンをスクショしてClaudeやGPTに画像解析させてみてください。",
+        "いいねと保存もお願いします。",
+        "概要欄のURLでパスワードを入力すると無料テンプレートが受け取れます。"
+    ],
+    "rate": "+15%"
+}
 FALLBACK_NARRATIONS = {
     "variables-launch": "HyperFramesのVariables機能を紹介します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。",
     "spacex-launch": "Claude CodeとHyperFramesを使ったシネマティック動画です。コメントにAI Conduitと書いてください。",
