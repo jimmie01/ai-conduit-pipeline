@@ -1999,6 +1999,20 @@ NARRATION_DATA["ung220z-tool-launch"] = {
     ],
     "rate": "+15%"
 }
+NARRATION_DATA["mdldm-maitian-launch"] = {
+    "chunks": [
+        "mdldm-maitianが1620スターを獲得しました。",
+        "麦田：自媒体多平台发布中控与数据监控（B站/抖音/小红书/视频号/YouTube。",
+        "mdldm-maitianは使いやすく設計されています。",
+        "インストールはコマンド一発で完了します。",
+        "実際に動かすと驚くほど速く動作します。",
+        "GitHubで1620スター、急速に拡大しています。",
+        "この動画の各シーンにパスワードが隠されています。全シーンをスクショしてClaudeやGPTに画像解析させてみてください。",
+        "いいねと保存もお願いします。",
+        "概要欄のURLでパスワードを入力すると無料テンプレートが受け取れます。"
+    ],
+    "rate": "+15%"
+}
 FALLBACK_NARRATIONS = {
     "variables-launch": "HyperFramesのVariables機能を紹介します。役に立ったらいいねと保存をお願いします。コメントにAI Conduitと書いてください。",
     "spacex-launch": "Claude CodeとHyperFramesを使ったシネマティック動画です。コメントにAI Conduitと書いてください。",
